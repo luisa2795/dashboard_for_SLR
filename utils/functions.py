@@ -1,6 +1,6 @@
 import pandas as pd
 from sqlalchemy import create_engine, text
-import re
+#import re
 
 #DB
 def initialize_engine(connection_params):
@@ -17,7 +17,7 @@ def initialize_engine(connection_params):
     """
     engine = create_engine('postgresql://{}:{}@{}:{}/{}'.format(
         connection_params['username'], connection_params['password'], connection_params['host'], connection_params['port'], connection_params['database']), 
-        future=True)#echo=True, 
+        future=True) 
     return engine
 
 def load_full_table(engine, table):
@@ -48,12 +48,26 @@ def load_df_from_query(engine, querystring):
     return (pd.read_sql_query(text(querystring), engine.connect()))
     
 #entrypoint functions
-def search_papers_by_keyword(engine, keyword, searchtitle=True, searchabstract=False, searchkeywords=False): 
+
+def get_papers_with_keywords(engine):
+    query="select * from aggregation_paper ap left join (select keywordgroup_pk, keyword_string from bridge_paper_keyword bpk join dim_keyword dk on bpk.keyword_pk =dk.keyword_pk) as kg_join on ap.keywordgroup_pk = kg_join.keywordgroup_pk"
+    return(load_df_from_query(engine, query))
+
+def search_papers_by_title(engine, keyword, searchtitle=True, searchabstract=False, searchkeywords=False): 
     if searchtitle:
         query="select * from aggregation_paper ap where title ilike '%{}%'".format(keyword)
         result=load_df_from_query(engine,query)
     return(result)
 
 def filter_df_by_title(df, keyword):
+    matches=df[df['title'].str.contains(".*{}.*".format(keyword), case=False)]
+    return matches
+
+def filter_df_by_keyword(df, keyword):
+    matches=df[df['keyword_string'].str.contains(".*{}.*".format(keyword), case=False)]
+    return matches
+
+def filter_df_by_title_keywords_and_abstract(df, keyword):
+    #TODO
     matches=df[df['title'].str.contains(".*{}.*".format(keyword), case=False)]
     return matches
