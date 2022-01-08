@@ -6,47 +6,60 @@ from dash.dependencies import Input, Output, State
 import utils.functions as fu
 from utils.db_credentials import dwh_db_connection_params
 
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+
 engine=fu.initialize_engine(dwh_db_connection_params)
 #df=fu.load_full_table(engine, 'aggregation_paper')
 df_k=fu.prep_df_for_display(engine)
 
-app=dash.Dash(__name__ , suppress_callback_exceptions=True)
+app=dash.Dash(__name__ , external_stylesheets=external_stylesheets, suppress_callback_exceptions=True, prevent_initial_callbacks=True)
 
 app.layout=html.Div(children=[
-    html.Div(children=[
-        html.H3('Enter search term to search matching papers: '),
-        html.Div(children=[
-            html.Div("Search in specific column: "),
-            dcc.Input(id='search_column', value='ontology', type='text'),
-            html.Br(),
-            "Select Column: ",
-            dcc.Checklist(id='columns_to_search',
-                options=[
-                    {'label': 'Title', 'value': 'title'},
-                    {'label': 'Keywords', 'value': 'keywords'},
-                    {'label': 'Abstract', 'value': 'abstract'},
+    dcc.Tabs(id='app_tabs', value='search_literature_tab', children=[
+        dcc.Tab(label='search papers', value='search_literature_tab'),
+        dcc.Tab(label='analyse selected papers', value='analyse_papers_tab')]),
+        html.Div(id='tab_content')])
+
+@app.callback(Output('tab_content', 'children'),Input('app_tabs', 'value'))
+
+def render_content(tab):
+    if tab=='search_literature_tab':
+        return html.Div(children=[
+            html.H3('Enter search term to search matching papers: '),
+            html.Div(children=[
+                html.Div("Search in specific column: "),
+                dcc.Input(id='search_column', value='ontology', type='text'),
+                html.Br(),
+                "Select Column: ",
+                dcc.Checklist(id='columns_to_search',
+                    options=[
+                        {'label': 'Title', 'value': 'title'},
+                        {'label': 'Keywords', 'value': 'keywords'},
+                        {'label': 'Abstract', 'value': 'abstract'},
+                    ],
+                    value=['keywords']
+                )],
+                style={'width': '29%', 'display': 'inline-block'}
+            ),
+            html.Div(children=[
+                html.Div("Search everything: "),
+                dcc.Input(id='search_everything', value='', type='text'), 
+                html.Br(),
+                html.Br(),
+                html.Button(id='submit_search_strings_button', n_clicks=0, children='Submit')
                 ],
-                value=['keywords']
-            )],
-            style={'width': '29%', 'display': 'inline-block'}
-        ),
-        html.Div(children=[
-            html.Div("Search everything: "),
-            dcc.Input(id='search_everything', value='', type='text'), 
-            html.Br(),
-            html.Br(),
-            html.Button(id='submit_search_strings_button', n_clicks=0, children='Submit')
-            ],
-            style={'width': '69%', 'float': 'right', 'display': 'inline-block'}
-    )]),    
-    html.Br(),
-    html.Div(id='searched_term'),
-    html.Div(id='click_counter'),
-    html.H4(children='Papers in the knowledge base'),
-    dcc.Loading(id='loading1', type='cube', children=[
-    html.Div(id='search_output', children=dash_table.DataTable(id='search_result_table'))]),
-    html.Div(id='manual_selected_papers')
-    ])
+                style={'width': '69%', 'float': 'right', 'display': 'inline-block'}
+        ),    
+        html.Br(),
+        html.Div(id='searched_term'),
+        html.Div(id='click_counter'),
+        html.H4(children='Papers in the knowledge base'),
+        dcc.Loading(id='loading1', type='cube', children=[
+        html.Div(id='search_output', children=dash_table.DataTable(id='search_result_table'))]),
+        html.Div(id='manual_selected_papers')
+        ])
+    if tab=='analyse_papers_tab':
+        return html.Div('under construction.')
 
 @app.callback(
     Output(component_id='searched_term', component_property='children'),
