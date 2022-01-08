@@ -1,5 +1,8 @@
 import pandas as pd
+import numpy as np
+import re
 from sqlalchemy import create_engine, text
+from dash import dash_table
 #import re
 
 #DB
@@ -49,9 +52,19 @@ def load_df_from_query(engine, querystring):
     
 #entrypoint functions
 
-def get_papers_with_keywords(engine):
+def load_papers_with_keywords(engine):
     query="select * from aggregation_paper ap left join (select keywordgroup_pk, keyword_string from bridge_paper_keyword bpk join dim_keyword dk on bpk.keyword_pk =dk.keyword_pk) as kg_join on ap.keywordgroup_pk = kg_join.keywordgroup_pk"
-    return(load_df_from_query(engine, query))
+    pap_kw=load_df_from_query(engine, query)
+    pap_kw.drop(columns=['keywordgroup_pk'], inplace=True)
+    return pap_kw
+
+def prep_df_for_display(engine):
+    pap=load_papers_with_keywords(engine)
+    pap_kw=pap[['paper_pk','keyword_string']]
+    #put together the keywords to a keyword string
+    pap_kw=pap_kw.groupby('paper_pk')['keyword_string'].apply(', '.join).reset_index()
+    final_df=pd.merge(pap_kw, pap.drop(columns='keyword_string'), how='left', on='paper_pk').rename(columns={'keyword_string': 'keywords'}).drop_duplicates().drop(columns=['citekey', 'article_source_id', 'authorgroup_pk', 'journal_pk'])
+    return final_df
 
 def search_papers_by_title(engine, keyword, searchtitle=True, searchabstract=False, searchkeywords=False): 
     if searchtitle:
@@ -63,11 +76,59 @@ def filter_df_by_title(df, keyword):
     matches=df[df['title'].str.contains(".*{}.*".format(keyword), case=False)]
     return matches
 
-def filter_df_by_keyword(df, keyword):
-    matches=df[df['keyword_string'].str.contains(".*{}.*".format(keyword), case=False)]
+def filter_df_columns_by_keyword(df, keyword, columns_to_search):
+    matches=pd.DataFrame()
+    for col in columns_to_search:
+        matches_col=df[df[col].str.contains(".*{}.*".format(keyword), case=False)]
+        matches=pd.concat([matches, matches_col])
     return matches
 
-def filter_df_by_title_keywords_and_abstract(df, keyword):
-    #TODO
-    matches=df[df['title'].str.contains(".*{}.*".format(keyword), case=False)]
-    return matches
+def filter_entire_df_by_searchterm(df, searchterm):
+    pattern=".*{}.*".format(searchterm)
+    regsearch=np.vectorize(lambda x: bool(re.search(pattern, x, re.IGNORECASE)))
+    dfs=df.astype(str, copy=True, errors='raise')
+    res=regsearch(dfs.values).any(1)
+    return df[res]
+
+
+
+
+#VISUALIZATION
+def generate_result_table(result_df):
+    return(dash_table.DataTable(
+        id='search_result_table',
+        columns=[{"name": i, "id": i, "deletable": True, "selectable": True} for i in result_df.columns],
+        data=result_df.to_dict('records'),
+        editable=True,
+        filter_action="native",
+        sort_action="native",
+        sort_mode="multi",
+        column_selectable="single",
+        row_selectable="multi",
+        row_deletable=True,
+        selected_columns=[],
+        selected_rows=[],
+        page_action="native",
+        page_current= 0,
+        page_size= 10,
+        style_data={
+        'whiteSpace': 'normal',
+    },
+        css=[{
+        'selector': '.dash-spreadsheet td div',
+        'rule': '''
+            line-height: 15px;
+            max-height: 30px; min-height: 30px; height: 30px;
+            display: block;
+            overflow-y: hidden;
+        '''
+    }],
+        tooltip_data=[
+        {
+            column: {'value': str(value), 'type': 'markdown'}
+            for column, value in row.items()
+        } for row in result_df.to_dict('records')
+    ],
+    tooltip_duration=None,
+
+        style_cell={'textAlign': 'left'}))

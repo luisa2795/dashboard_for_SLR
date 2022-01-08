@@ -1,6 +1,7 @@
 #DB credentials
 utils/db_credentials.py
-
+#testing notebook
+*.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
