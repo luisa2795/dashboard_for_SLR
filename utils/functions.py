@@ -72,10 +72,6 @@ def search_papers_by_title(engine, keyword, searchtitle=True, searchabstract=Fal
         result=load_df_from_query(engine,query)
     return(result)
 
-def filter_df_by_title(df, keyword):
-    matches=df[df['title'].str.contains(".*{}.*".format(keyword), case=False)]
-    return matches
-
 def filter_df_columns_by_keyword(df, keyword, columns_to_search):
     matches=pd.DataFrame()
     for col in columns_to_search:
@@ -90,10 +86,31 @@ def filter_entire_df_by_searchterm(df, searchterm):
     res=regsearch(dfs.values).any(1)
     return df[res]
 
+def find_child_entities(dim_ents, entity_hierarchy, parent_ent):
+    children_ents=dim_ents[dim_ents['entity_pk'].isin(entity_hierarchy[entity_hierarchy['parent_entity_pk']==(dim_ents[dim_ents['entity_name']==parent_ent]['entity_pk'].values[0])]['child_entity_pk'].to_list())]
+    children_names=children_ents['entity_name'].to_list()
+    return children_names
 
-
+def filter_df_by_entity(df, dropdown_labels, implied_child_entities, entity_name, include_child_ents):
+    if include_child_ents==1:
+        search_ents=implied_child_entities.split(', ')
+    else:
+        search_ents=[entity_name]
+    result_df=pd.DataFrame()
+    for ent in search_ents:
+        matches=df[df[dropdown_labels.lower()]==ent]
+        result_df=pd.concat([result_df, matches])
+    return result_df
+    
 
 #VISUALIZATION
+
+def get_label_options(dim_entitiy_df):
+    options=[]
+    for ent_label in list(dim_entitiy_df.entity_label.unique()):
+        options.append({'label': ent_label, 'value': ent_label})
+    return options
+
 def generate_result_table(result_df):
     return(dash_table.DataTable(
         id='search_result_table',
@@ -132,3 +149,5 @@ def generate_result_table(result_df):
     tooltip_duration=None,
 
         style_cell={'textAlign': 'left'}))
+
+
