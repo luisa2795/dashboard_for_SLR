@@ -3,6 +3,7 @@ import numpy as np
 import re
 from sqlalchemy import create_engine, text
 from dash import dash_table
+import plotly.express as px
 #import re
 
 #DB
@@ -150,4 +151,10 @@ def generate_result_table(result_df):
 
         style_cell={'textAlign': 'left'}))
 
+def generate_parallel_categories_overview_graph(selected_pks_string, df_complete):
+    pks=selected_pks_string.split(', ')
+    int_pks=[int(pk) for pk in pks]
+    filtered_df=df_complete[df_complete.paper_pk.isin(int_pks)]
+    fig=px.parallel_categories(filtered_df.drop(columns=['paper_pk', 'keywords', 'abstract']))
+    return fig
 

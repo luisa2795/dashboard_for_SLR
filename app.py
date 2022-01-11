@@ -36,16 +36,7 @@ CONTENT_STYLE = {
 }
 
 app.layout=html.Div(children=[
-    dcc.Tabs(id='app_tabs', value='search_literature_tab', children=[
-        dcc.Tab(label='search papers', value='search_literature_tab'),
-        dcc.Tab(label='analyse selected papers', value='analyse_papers_tab')]),
-        html.Div(id='tab_content')])
-
-@app.callback(Output('tab_content', 'children'),Input('app_tabs', 'value'))
-
-def render_content(tab):
-    if tab=='search_literature_tab':
-        return html.Div(children=[
+        html.Div(id='search papers', children=[
             html.H5('Paper Search'),
             html.Div(children=[
                 html.Div("Search keyword in column: "),
@@ -105,27 +96,15 @@ def render_content(tab):
             html.Div(id='click_counter'),
             html.Br(),
             dcc.Loading(id='loading1', type='cube', children=[
-                html.Div(id='search_output', children=dash_table.DataTable(id='search_result_table'))]),
+                html.Div(id='search_output', children=dash_table.DataTable(id='search_result_table')
+            )])
+        ]),
+        html.Div(id='analyse_papers', children=[
             html.Div(id='manual_selected_papers'),
-            html.Div(id='for_analysis_button')
+            html.Div(id='for_analysis_button'),
+            html.Div(id='parallel_categories_overview')
         ])
-    if tab=='analyse_papers_tab':
-        return html.Div(children=[
-            html.Div(id='sidebar', children=[
-                html.H4('Your selected papers'),
-                html.Hr(),
-                html.P('This will be a list of papers with checkboxes.'),
-                html.Div(id='selected_papers')
-            ],
-            style=SIDEBAR_STYLE
-            ),
-            html.Div([
-                html.H1('Content'),
-                html.P('some content.')
-            ],
-            style=CONTENT_STYLE
-            )
-        ])
+])
 
 @app.callback(
     Output(component_id='searched_term', component_property='children'),
@@ -217,16 +196,20 @@ def show_button_upon_selection(manual_selected_papers):
     else: 
         PreventUpdate
 
+#TODO change this to return parallel categories diagram of the selected papers
 @app.callback(
-    Output(component_id='selected_papers', component_property='children'),
+    Output(component_id='parallel_categories_overview', component_property='children'),
     Input(component_id='move_to_analysis_button', component_property='n_clicks'),
     State(component_id='manual_selected_papers', component_property='children')
 )
 def update_papers_for_analysis(n_clicks, sel_papers):
-    if not n_clicks:
-        return 'Please search and select papers first.'
+    if n_clicks==0:
+        raise PreventUpdate
     else:
-        return sel_papers
+        fig=fu.generate_parallel_categories_overview_graph(sel_papers, df_k)
+        return(dcc.Graph(figure=fig))
+        
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)
