@@ -6,8 +6,9 @@ import pandas as pd
 import utils.functions as fu
 from utils.db_credentials import dwh_db_connection_params
 from dash.exceptions import PreventUpdate
+#import dash_bootstrap_components as dbc
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css'] # dbc.themes.QUARTZ is the most beautiful one but less serious, FLATLY
 
 engine=fu.initialize_engine(dwh_db_connection_params)
 dim_ent=fu.load_full_table(engine, 'dim_entity')
@@ -16,6 +17,23 @@ ent_hierarchy=fu.load_full_table(engine, 'map_entity_hierarchy')
 df_k=fu.prep_df_for_display(engine)
 
 app=dash.Dash(__name__ , external_stylesheets=external_stylesheets, suppress_callback_exceptions=True) #prevent_initial_callbacks=True
+
+#styles for the analysis page
+SIDEBAR_STYLE = {
+    "position": "fixed",
+    "top": 0,
+    "left": 0,
+    "bottom": 0,
+    "width": "16rem",
+    "padding": "2rem 1rem",
+    "background-color": "#f8f9fa",
+}
+
+CONTENT_STYLE = {
+    "margin-left": "18rem",
+    "margin-right": "2rem",
+    "padding": "2rem 1rem",
+}
 
 app.layout=html.Div(children=[
     dcc.Tabs(id='app_tabs', value='search_literature_tab', children=[
@@ -88,10 +106,26 @@ def render_content(tab):
             html.Br(),
             dcc.Loading(id='loading1', type='cube', children=[
                 html.Div(id='search_output', children=dash_table.DataTable(id='search_result_table'))]),
-            html.Div(id='manual_selected_papers')
+            html.Div(id='manual_selected_papers'),
+            html.Div(id='for_analysis_button')
         ])
     if tab=='analyse_papers_tab':
-        return html.Div('under construction.')
+        return html.Div(children=[
+            html.Div(id='sidebar', children=[
+                html.H4('Your selected papers'),
+                html.Hr(),
+                html.P('This will be a list of papers with checkboxes.'),
+                html.Div(id='selected_papers')
+            ],
+            style=SIDEBAR_STYLE
+            ),
+            html.Div([
+                html.H1('Content'),
+                html.P('some content.')
+            ],
+            style=CONTENT_STYLE
+            )
+        ])
 
 @app.callback(
     Output(component_id='searched_term', component_property='children'),
@@ -161,16 +195,38 @@ def display_included_entitiy_children(chosen_entity, include_child_ents):
 def update_selected_titles(previously_selected_papers, derived_virtual_data, derived_virtual_selected_rows):
     if derived_virtual_selected_rows:
         sel_data=[derived_virtual_data[i] for i in derived_virtual_selected_rows]
-        sel_keys=', '.join([str(pk) for pk in pd.DataFrame(sel_data)['paper_pk'].to_list()])
+        sel_keys=[str(pk) for pk in pd.DataFrame(sel_data)['paper_pk'].to_list()]
         if previously_selected_papers:
-            return (previously_selected_papers + ', ' + sel_keys)
+            previous_list=previously_selected_papers.split(', ')
+            delta_keys=[k for k in sel_keys if (k not in previous_list)]
         else:
-            return sel_keys
+            previous_list=[]
+            delta_keys=sel_keys
+        return_keys=', '.join(previous_list+delta_keys)
+        return return_keys
     else:
         raise PreventUpdate
 
+@app.callback(
+    Output(component_id='for_analysis_button', component_property='children'),
+    Input(component_id='manual_selected_papers', component_property='children')
+)
+def show_button_upon_selection(manual_selected_papers):
+    if manual_selected_papers:
+        return html.Button(id='move_to_analysis_button', n_clicks=0, children='Analyse selected literature')
+    else: 
+        PreventUpdate
 
-
+@app.callback(
+    Output(component_id='selected_papers', component_property='children'),
+    Input(component_id='move_to_analysis_button', component_property='n_clicks'),
+    State(component_id='manual_selected_papers', component_property='children')
+)
+def update_papers_for_analysis(n_clicks, sel_papers):
+    if not n_clicks:
+        return 'Please search and select papers first.'
+    else:
+        return sel_papers
 
 if __name__ == '__main__':
     app.run_server(debug=True)
