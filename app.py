@@ -2,10 +2,10 @@ import dash
 from dash import dcc, html, dash_table
 from dash.dependencies import Input, Output, State
 #import plotly.express as px
-#import pandas as pd
+import pandas as pd
 import utils.functions as fu
 from utils.db_credentials import dwh_db_connection_params
-import json
+from dash.exceptions import PreventUpdate
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -28,9 +28,9 @@ app.layout=html.Div(children=[
 def render_content(tab):
     if tab=='search_literature_tab':
         return html.Div(children=[
-            html.H3('Enter search term to search matching papers: '),
+            html.H5('Paper Search'),
             html.Div(children=[
-                html.Div("Search in specific column: "),
+                html.Div("Search keyword in column: "),
                 dcc.Input(id='search_term', type='text'),#, value='ontology'
                 html.Br(),
                 "Select Column: ",
@@ -41,10 +41,10 @@ def render_content(tab):
                         {'label': 'Abstract', 'value': 'abstract'},
                         {'label': 'search all fields', 'value': 'entire_df'},
                     ],
-                    #value=['keywords']
+                    value=['keywords']
                 ),
                 html.Br(),
-                html.Button(id='submit_search_strings_button', n_clicks=0, children='Submit'),
+                html.Button(id='submit_search_strings_button', n_clicks=0, children='Submit keyword search'),
                 html.Br(),
                 html.Br()
                 ],
@@ -85,9 +85,9 @@ def render_content(tab):
             html.Br(),
             html.Div(id='searched_term'),
             html.Div(id='click_counter'),
-            html.H4(children='Papers in the knowledge base'),
+            html.Br(),
             dcc.Loading(id='loading1', type='cube', children=[
-            html.Div(id='search_output', children=dash_table.DataTable(id='search_result_table'))]),
+                html.Div(id='search_output', children=dash_table.DataTable(id='search_result_table'))]),
             html.Div(id='manual_selected_papers')
         ])
     if tab=='analyse_papers_tab':
@@ -109,8 +109,9 @@ def render_content(tab):
 def update_result_table(submit_search_strings_button_clicks, submit_entity_search, search_term, columns_to_search, dropdown_labels, implied_child_entities, entity_name, include_child_ents):
     ctx=dash.callback_context
     if not ctx.triggered:
-        table=fu.generate_result_table(df_k)
-        searchterm=''
+        raise PreventUpdate
+        #table=fu.generate_result_table(df_k)
+        #searchterm=''
     else:
         if ctx.triggered[0]['prop_id']=='submit_search_strings_button.n_clicks':
             if 'entire_df' in columns_to_search:
@@ -125,7 +126,7 @@ def update_result_table(submit_search_strings_button_clicks, submit_entity_searc
             searchterm='Your searched entity: {}'.format(entity_name)
             table=fu.generate_result_table(result_df)
     clicks='Your clicked {} times.'.format(submit_search_strings_button_clicks + submit_entity_search)
-    return str(ctx.triggered), clicks, table
+    return searchterm, clicks, table
     
 
 @app.callback(
@@ -150,33 +151,26 @@ def display_included_entitiy_children(chosen_entity, include_child_ents):
         child_ents=[]
     return (', '.join(child_ents))
 
-# @app.callback(
-#     Output(component_id='search_output', component_property='children'),
-#     Input(component_id='submit_entity_search', component_property='n_clicks'),
-#     State(component_id='implied_child_entities', component_property='value'),
-#     State(component_id='available_entities', component_property='value'),
-#     State(component_id='include_child_ents', component_property='value')
-# )
-# def update_results_upon_entity_search():
-#     pass
+
+@app.callback(
+    Output(component_id='manual_selected_papers', component_property='children'),
+    Input(component_id='manual_selected_papers', component_property='children'),
+    Input(component_id='search_result_table', component_property='derived_virtual_data'),
+    Input(component_id='search_result_table', component_property='derived_virtual_selected_rows'))
+
+def update_selected_titles(previously_selected_papers, derived_virtual_data, derived_virtual_selected_rows):
+    if derived_virtual_selected_rows:
+        sel_data=[derived_virtual_data[i] for i in derived_virtual_selected_rows]
+        sel_keys=', '.join([str(pk) for pk in pd.DataFrame(sel_data)['paper_pk'].to_list()])
+        if previously_selected_papers:
+            return (previously_selected_papers + ', ' + sel_keys)
+        else:
+            return sel_keys
+    else:
+        raise PreventUpdate
 
 
-# @app.callback(
-#     Output(component_id='manual_selected_papers', component_property='children'),
-#     Input(component_id='search_result_table', component_property='derived_virtual_data'),
-#     Input(component_id='search_result_table', component_property='derived_virtual_selected_rows'))
 
-# def list_selected_titles(derived_virtual_data, derived_virtual_selected_rows):
-#     sel_data=[derived_virtual_data[i] for i in derived_virtual_selected_rows]
-#     sel_df=str(pd.DataFrame(sel_data)['paper_pk'].to_list())
-#     # table=dash_table.DataTable(
-#     #     id='man_sel_table',
-#     #     columns=[{"name": i, "id": i} for i in sel_df.columns],
-#     #     data=sel_df.to_dict('records'),
-#     #     style_data={
-#     #     'whiteSpace': 'normal',
-#     # })
-#     return sel_df
 
 if __name__ == '__main__':
     app.run_server(debug=True)

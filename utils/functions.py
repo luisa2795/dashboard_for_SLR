@@ -114,7 +114,7 @@ def get_label_options(dim_entitiy_df):
 def generate_result_table(result_df):
     return(dash_table.DataTable(
         id='search_result_table',
-        columns=[{"name": i, "id": i, "deletable": True, "selectable": True} for i in result_df.columns],
+        columns=[{"name": i, "id": i, "selectable": True} for i in result_df.columns], #"deletable": True, 
         data=result_df.to_dict('records'),
         editable=True,
         filter_action="native",
