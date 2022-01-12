@@ -3,8 +3,8 @@ import numpy as np
 import re
 from sqlalchemy import create_engine, text
 from dash import dash_table
-import plotly.express as px
-#import re
+import plotly.graph_objects as go
+import plotly.subplots as sub
 
 #DB
 def initialize_engine(connection_params):
@@ -152,9 +152,54 @@ def generate_result_table(result_df):
         style_cell={'textAlign': 'left'}))
 
 def generate_parallel_categories_overview_graph(selected_pks_string, df_complete):
+    #transform string back to list of integer paper_pks
     pks=selected_pks_string.split(', ')
     int_pks=[int(pk) for pk in pks]
-    filtered_df=df_complete[df_complete.paper_pk.isin(int_pks)]
-    fig=px.parallel_categories(filtered_df.drop(columns=['paper_pk', 'keywords', 'abstract']))
+    #get df entries of selected keys
+    filtered_df=df_complete[df_complete.paper_pk.isin(int_pks).drop(columns=['paper_pk', 'keywords', 'abstract'])]
+    #build dimensions for 3 subplots
+    subject_labels=['paper_pk', 'topic', 'technology', 'theory', 'paradigm']
+    subject_dimensions=[dict(values=filtered_df[label], label=label) for label in subject_labels]
+
+    scope_labels=['paper_pk', 'sector', 'region', 'level', 'company_type', 'collection_method', 'participants']
+    scope_dimensions=[dict(values=filtered_df[label], label=label) for label in scope_labels]
+
+    methodology_labels=['paper_pk', 'conceptual_method', 'model_element', 'sampling', 'analysis_method', 'validity', 'metric']
+    methodology_dimensions=[dict(values=filtered_df[label], label=label) for label in methodology_labels]
+
+    #define figure and subplots
+    fig=go.FigureWidget(sub.make_subplots(
+        rows=3, cols=1, 
+        specs=[[{"type": "domain"}], [{"type": "domain"}], [{"type": "domain"}]],
+        subplot_titles=("Subjects", "Scope", "Methodology")
+        ))
+
+    fig.add_trace(go.Parcats(
+            dimensions=subject_dimensions,
+            line={'color': filtered_df.paper_pk, 'colorscale': 'turbo', 'shape':'hspline'},
+            hoveron='color',
+            arrangement='freeform',
+        ), row=1, col=1)
+
+    fig.add_trace(go.Parcats(
+            dimensions=scope_dimensions,
+            line={'color': filtered_df.paper_pk,'colorscale': 'turbo', 'shape':'hspline'},
+            hoveron='color',
+            arrangement='freeform'
+        ), row=2, col=1)
+
+    fig.add_trace(go.Parcats(
+            dimensions=methodology_dimensions,
+            line={'color': filtered_df.paper_pk, 'colorscale': 'turbo','shape':'hspline'},
+            hoveron='color',
+            arrangement='freeform'
+        ), row=3, col=1)
+
+    fig.update_layout(height=800)
+    #fig3.update_traces(line_colorbar_showticklabels=True)
+
+    fig.layout.annotations[0].update(y=1.05, font={'size': 18}, x=0.05, xanchor= 'left')
+    fig.layout.annotations[1].update(y=0.66, font={'size': 18}, x=0.05, xanchor= 'left')
+    fig.layout.annotations[2].update(y=0.275, font={'size': 18}, x=0.05, xanchor= 'left')
     return fig
 

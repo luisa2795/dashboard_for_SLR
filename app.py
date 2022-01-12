@@ -123,8 +123,6 @@ def update_result_table(submit_search_strings_button_clicks, submit_entity_searc
     ctx=dash.callback_context
     if not ctx.triggered:
         raise PreventUpdate
-        #table=fu.generate_result_table(df_k)
-        #searchterm=''
     else:
         if ctx.triggered[0]['prop_id']=='submit_search_strings_button.n_clicks':
             if 'entire_df' in columns_to_search:
@@ -134,7 +132,6 @@ def update_result_table(submit_search_strings_button_clicks, submit_entity_searc
             searchterm='Your searched term: {}'.format(search_term)
             table=fu.generate_result_table(result_df) 
         else:
-            #result_df=fu.filter_df_columns_by_keyword(df_k, entity_name, ['keywords'])
             result_df=fu.filter_df_by_entity(df_k, dropdown_labels, implied_child_entities, entity_name, include_child_ents)
             searchterm='Your searched entity: {}'.format(entity_name)
             table=fu.generate_result_table(result_df)
@@ -208,7 +205,6 @@ def update_papers_for_analysis(n_clicks, sel_papers):
     else:
         fig=fu.generate_parallel_categories_overview_graph(sel_papers, df_k)
         return(dcc.Graph(figure=fig))
-        
 
 
 if __name__ == '__main__':
