@@ -3,8 +3,10 @@ import numpy as np
 import re
 from sqlalchemy import create_engine, text
 from dash import dash_table
+import dash_core_components as dcc
 import plotly.graph_objects as go
 import plotly.subplots as sub
+import plotly.express as px
 
 #DB
 def initialize_engine(connection_params):
@@ -151,12 +153,21 @@ def generate_result_table(result_df):
 
         style_cell={'textAlign': 'left'}))
 
-def generate_parallel_categories_overview_graph(selected_pks_string, df_complete):
+def get_filtered_df_from_string_of_paper_pks(selected_pks_string, df_complete):
     #transform string back to list of integer paper_pks
     pks=selected_pks_string.split(', ')
     int_pks=[int(pk) for pk in pks]
     #get df entries of selected keys
-    filtered_df=df_complete[df_complete.paper_pk.isin(int_pks).drop(columns=['paper_pk', 'keywords', 'abstract'])]
+    filtered_df=df_complete[df_complete.paper_pk.isin(int_pks)]
+    return filtered_df
+
+def get_checkboxes_from_selected_papers(selected_pks_string, df_complete):
+    filtered_df=get_filtered_df_from_string_of_paper_pks(selected_pks_string, df_complete)
+    options=filtered_df[['paper_pk', 'title']].apply(lambda row: {'label': str(row['paper_pk']) + ' - ' + row['title'], 'value': row['paper_pk']}, axis=1).to_list()
+    return dcc.Checklist(id='analysis_papers_checklist', options=options, value=filtered_df['paper_pk'].to_list(), labelStyle={'font-size': '11px'})
+
+def generate_parallel_categories_overview_graph(selected_pks_list, df_complete):
+    filtered_df=df_complete[df_complete.paper_pk.isin(selected_pks_list)]
     #build dimensions for 3 subplots
     subject_labels=['paper_pk', 'topic', 'technology', 'theory', 'paradigm']
     subject_dimensions=[dict(values=filtered_df[label], label=label) for label in subject_labels]
@@ -202,4 +213,42 @@ def generate_parallel_categories_overview_graph(selected_pks_string, df_complete
     fig.layout.annotations[1].update(y=0.66, font={'size': 18}, x=0.05, xanchor= 'left')
     fig.layout.annotations[2].update(y=0.275, font={'size': 18}, x=0.05, xanchor= 'left')
     return fig
+
+def generate_metadata_graphs(checked_paper_pks, df_complete, engine):
+    filtered_df=df_complete[df_complete.paper_pk.isin(checked_paper_pks)]
+    #time histogram
+    nbins=round(((filtered_df.year.max()-filtered_df.year.min()).days)/365.24259)
+    fig_time=go.Figure()
+    fig_time.add_trace(go.Histogram(x=filtered_df.year, y=filtered_df.title, nbinsx=nbins, marker_color='#000099', opacity=0.75))
+    fig_time.update_layout(bargap=0.2, title_text='Publications over time')
+    #journals pie chart
+    #first, get journal information for each paper in the selection
+    jour_sql='select * from (select journal_pk, paper_pk, title as paper_title from dim_paper dp where paper_pk in {}) as pap left join dim_journal dj on pap.journal_pk = dj.journal_pk '.format(tuple(checked_paper_pks))
+    journals_filtered=load_df_from_query(engine, querystring=jour_sql)
+    fig_journals=px.pie(journals_filtered, names='title', color_discrete_sequence=px.colors.sequential.Plasma, title='Publications per journal')
+    fig_journals.update_traces(textinfo='value')
+    fig_journals.update_layout(
+        legend=dict(
+            font=dict(
+                size=9
+            ),
+            orientation='h'
+        )
+    )
+    #institutes pie chart
+    #which authors are involved?
+    auth_sql='select * from (select * from (select authorgroup_pk, paper_pk, title as paper_title from dim_paper dp where paper_pk in {}) as pap left join bridge_paper_author bpa on pap.authorgroup_pk = bpa.authorgroup_pk) as agr left join dim_author da on agr.author_pk=da.author_pk'.format(tuple(checked_paper_pks))
+    authors_filtered=load_df_from_query(engine, querystring=auth_sql)
+    fig_institutes=px.pie(authors_filtered, names='institution', color_discrete_sequence=px.colors.sequential.Plasma, hover_data=['country'], title='Publications per institute')
+    fig_institutes.update_traces(textinfo='value')
+    fig_institutes.update_layout(
+        legend=dict(
+            font=dict(
+                size=9
+            ),
+            orientation='h'
+        )
+    )
+    #fig_institutes.update_layout(uniformtext_minsize=9, uniformtext_mode='hide')
+    return fig_time, fig_journals, fig_institutes
 

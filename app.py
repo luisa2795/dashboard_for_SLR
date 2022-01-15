@@ -6,6 +6,7 @@ import pandas as pd
 import utils.functions as fu
 from utils.db_credentials import dwh_db_connection_params
 from dash.exceptions import PreventUpdate
+import dash_daq as daq
 #import dash_bootstrap_components as dbc
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css'] # dbc.themes.QUARTZ is the most beautiful one but less serious, FLATLY
@@ -18,24 +19,22 @@ df_k=fu.prep_df_for_display(engine)
 
 app=dash.Dash(__name__ , external_stylesheets=external_stylesheets, suppress_callback_exceptions=True) #prevent_initial_callbacks=True
 
-#styles for the analysis page
-SIDEBAR_STYLE = {
-    "position": "fixed",
-    "top": 0,
-    "left": 0,
-    "bottom": 0,
-    "width": "16rem",
-    "padding": "2rem 1rem",
-    "background-color": "#f8f9fa",
-}
 
-CONTENT_STYLE = {
-    "margin-left": "18rem",
-    "margin-right": "2rem",
-    "padding": "2rem 1rem",
-}
 
-app.layout=html.Div(children=[
+app.layout=html.Div(
+    children=[
+        html.H2('Welcome to the Systematic Review Dashboard'),
+        html.P('This Dashboard was designed on top of a Data-Warehouse of Scientific Literature and can help you understand the current state of research or to find suitable papers to quote for a specific methodology. Try it out!'), 
+        html.Div(children=[
+            html.H4('Understand the current body of knowledge for your topic', style={'width': '29%', 'display': 'inline-block', 'padding': '10px'}),
+            daq.ToggleSwitch(
+                id='toggle_function',
+                value=True,
+                size=100,
+                style={'width': '29%', 'display': 'inline-block', 'padding': '10px'}
+            ),
+            html.H4('Which paper and who have been referenced often for your topic?', style={'width': '29%', 'display': 'inline-block', 'padding': '10px'})
+        ]),
         html.Div(id='search papers', children=[
             html.H5('Paper Search'),
             html.Div(children=[
@@ -96,19 +95,25 @@ app.layout=html.Div(children=[
             html.Div(id='click_counter'),
             html.Br(),
             dcc.Loading(id='loading1', type='cube', children=[
-                html.Div(id='search_output', children=dash_table.DataTable(id='search_result_table')
-            )])
+                html.Div(id='for_select_all_btn'),
+                html.Div(id='search_output', children=dash_table.DataTable(id='search_result_table'))
+                ])
         ]),
         html.Div(id='analyse_papers', children=[
             html.Div(id='manual_selected_papers'),
             html.Div(id='for_analysis_button'),
-            html.Div(id='parallel_categories_overview')
-        ])
+            html.Div(id='for_paper_checkboxes'),
+            html.Div(id='for_content_comparison_button'),
+            html.Div(id='parallel_categories_overview'),
+            html.Div(id='for_metadata_button'),
+            html.Div(id='metadata_figures')
+        ])     
 ])
 
 @app.callback(
     Output(component_id='searched_term', component_property='children'),
     Output(component_id='click_counter', component_property='children'),
+    Output(component_id='for_select_all_btn', component_property='children'),
     Output(component_id='search_output', component_property='children'),
     Input(component_id='submit_search_strings_button', component_property='n_clicks'),
     Input(component_id='submit_entity_search', component_property='n_clicks'),
@@ -136,7 +141,7 @@ def update_result_table(submit_search_strings_button_clicks, submit_entity_searc
             searchterm='Your searched entity: {}'.format(entity_name)
             table=fu.generate_result_table(result_df)
     clicks='Your clicked {} times.'.format(submit_search_strings_button_clicks + submit_entity_search)
-    return searchterm, clicks, table
+    return searchterm, clicks, html.Button(id='select_all_button', n_clicks=0, children='Select all'), table
     
 
 @app.callback(
@@ -160,6 +165,17 @@ def display_included_entitiy_children(chosen_entity, include_child_ents):
     else:
         child_ents=[]
     return (', '.join(child_ents))
+
+@app.callback(
+    Output('search_result_table', 'selected_rows'),
+    Input('select_all_button', 'n_clicks'),
+    State('search_result_table', 'derived_virtual_data')
+)
+def select_all(selbtn_clicks, search_results):
+    if selbtn_clicks==0:
+        raise PreventUpdate
+    else:
+        return [i for i in range(len(search_results))]
 
 
 @app.callback(
@@ -187,25 +203,57 @@ def update_selected_titles(previously_selected_papers, derived_virtual_data, der
     Output(component_id='for_analysis_button', component_property='children'),
     Input(component_id='manual_selected_papers', component_property='children')
 )
-def show_button_upon_selection(manual_selected_papers):
+def show_analysis_button_upon_selection(manual_selected_papers):
     if manual_selected_papers:
-        return html.Button(id='move_to_analysis_button', n_clicks=0, children='Analyse selected literature')
+        return html.Button(id='move_to_analysis_button', n_clicks=0, children='Search finished, move to analysis')
     else: 
-        PreventUpdate
+        raise PreventUpdate
 
-#TODO change this to return parallel categories diagram of the selected papers
 @app.callback(
-    Output(component_id='parallel_categories_overview', component_property='children'),
+    [
+        Output(component_id='for_paper_checkboxes', component_property='children'),
+        Output(component_id='for_content_comparison_button', component_property='children'),
+        Output(component_id='for_metadata_button', component_property='children')
+    ],
     Input(component_id='move_to_analysis_button', component_property='n_clicks'),
     State(component_id='manual_selected_papers', component_property='children')
 )
-def update_papers_for_analysis(n_clicks, sel_papers):
+def show_content_and_metadata_buttons_upon_analysis_start(analysis_clicks, selected_papers_string):
+    if analysis_clicks!=0:
+        return [
+            fu.get_checkboxes_from_selected_papers(selected_papers_string, df_k),
+            html.Button(id='content_comparison_button', n_clicks=0, children='Compare content of selected literature'), 
+            html.Button(id='analyse_metadata_button', n_clicks=0, children='Analyse metadata of selected literature')]
+    else: 
+        raise PreventUpdate
+
+@app.callback(
+    Output(component_id='parallel_categories_overview', component_property='children'),
+    Input(component_id='content_comparison_button', component_property='n_clicks'),
+    State(component_id='analysis_papers_checklist', component_property='value')
+)
+def update_content_analysis(n_clicks, checked_paper_pks):
     if n_clicks==0:
         raise PreventUpdate
     else:
-        fig=fu.generate_parallel_categories_overview_graph(sel_papers, df_k)
+        fig=fu.generate_parallel_categories_overview_graph(checked_paper_pks, df_k)
         return(dcc.Graph(figure=fig))
 
+@app.callback(
+    Output(component_id='metadata_figures', component_property='children'),
+    Input(component_id='analyse_metadata_button', component_property='n_clicks'),
+    State(component_id='analysis_papers_checklist', component_property='value')
+)
+def update_metadata_analysis(n_clicks, checked_paper_pks):
+    if n_clicks==0:
+        raise PreventUpdate
+    else:
+        fig_time, fig_journals, fig_institutes=fu.generate_metadata_graphs(checked_paper_pks, df_k, engine)
+        return [
+            dcc.Graph(figure=fig_time, style={'width': '40%', 'vertical-align': 'top', 'display': 'inline-block'}), 
+            dcc.Graph(figure=fig_journals, style={'width': '30%', 'vertical-align': 'top', 'display': 'inline-block'}), 
+            dcc.Graph(figure=fig_institutes, style={'width': '30%', 'vertical-align': 'top', 'display': 'inline-block'})
+            ]
 
 if __name__ == '__main__':
     app.run_server(debug=True)
