@@ -2,4 +2,4 @@ dash
 sqlalchemy
 pandas
 dash_daq
-#dash-bootstrap-components
+dash-bootstrap-components

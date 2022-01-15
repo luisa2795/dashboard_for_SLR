@@ -2,8 +2,7 @@ import pandas as pd
 import numpy as np
 import re
 from sqlalchemy import create_engine, text
-from dash import dash_table
-import dash_core_components as dcc
+from dash import dash_table, dcc
 import plotly.graph_objects as go
 import plotly.subplots as sub
 import plotly.express as px
@@ -92,6 +91,8 @@ def filter_entire_df_by_searchterm(df, searchterm):
 def find_child_entities(dim_ents, entity_hierarchy, parent_ent):
     children_ents=dim_ents[dim_ents['entity_pk'].isin(entity_hierarchy[entity_hierarchy['parent_entity_pk']==(dim_ents[dim_ents['entity_name']==parent_ent]['entity_pk'].values[0])]['child_entity_pk'].to_list())]
     children_names=children_ents['entity_name'].to_list()
+    #escape single quotes with another single quote to avoid mistakes when querying these values from postgres
+    children_names=[s.translate(str.maketrans({"'" : ""}, )) for s in children_names]
     return children_names
 
 def filter_df_by_entity(df, dropdown_labels, implied_child_entities, entity_name, include_child_ents):
@@ -252,3 +253,72 @@ def generate_metadata_graphs(checked_paper_pks, df_complete, engine):
     #fig_institutes.update_layout(uniformtext_minsize=9, uniformtext_mode='hide')
     return fig_time, fig_journals, fig_institutes
 
+
+
+###########################
+#REFERENCES VISUALIZATION
+###########################
+
+def get_barchart_of_most_relevant_citations(entity_list, engine, n_ref=15):
+    #ref_topic_sql='select count(*), paper_pk, title, year, citekey from dim_paper dp where paper_pk in (select paper_pk from bridge_sentence_citation bsc where citationgroup_pk in (select citationgroup_pk from dim_sentence where sentence_pk in (select sentence_pk from fact_entity_detection fed where entity_pk in (select entity_pk from dim_entity where entity_name in {})))) group by dp.paper_pk order by count(*) desc'
+    para_sql='select count(*), paper_pk, title, year, citekey from dim_paper dp where paper_pk in (select paper_pk from bridge_sentence_citation bsc where citationgroup_pk in (select citationgroup_pk from dim_sentence where paragraph_pk in (select paragraph_pk from dim_sentence ds where sentence_pk in (select sentence_pk from fact_entity_detection fed where entity_pk in (select entity_pk from dim_entity where entity_name in {}))))) group by dp.paper_pk order by count(*) desc'
+    if len(entity_list)==1:
+        df_ref=load_df_from_query(engine, para_sql.format("('" + entity_list[0] + "')"))
+    else:
+        df_ref=load_df_from_query(engine, para_sql.format(tuple(entity_list)))
+    #drop missing titles
+    df_ref=df_ref[~(df_ref['title']=='MISSING')]
+    #aggregate the same titles by their sum of count
+    for_bar=df_ref.groupby(by='title')['count'].agg('sum').reset_index()
+    #get the n_ref most popular titles
+    for_bar=for_bar.sort_values(by='count', ascending=True, ignore_index=True)[-n_ref:]
+    fig_bar=px.bar(
+        for_bar, x='count', y='title', 
+        color_discrete_sequence=px.colors.sequential.Plasma, 
+        text='title',
+        labels={'title': 'reference title', 'count': 'times referenced for selected entities'}) #, height=600
+    fig_bar.update_yaxes(showticklabels=False)
+    fig_bar.update_traces(textfont_size=10, textposition='inside')
+    return fig_bar
+
+def non_missing_longest(ser):
+    ser=ser[~ser.str.contains('MISSING')]
+    if ser.size!=0:
+        return max(ser, key=len)
+    else:
+        return 'MISSING'
+
+def get_barchart_of_most_influential_authors(entity_list, engine, n_ref=15):
+    auth_sql='''
+    select *, count(*) from dim_author da where author_pk in (
+    select author_pk from bridge_paper_author bpa where authorgroup_pk in (
+    select authorgroup_pk from dim_paper where paper_pk in (
+    select paper_pk from bridge_sentence_citation bsc where citationgroup_pk in (
+    select citationgroup_pk from dim_sentence where paragraph_pk in (
+    select paragraph_pk from dim_sentence ds where sentence_pk in (
+    select sentence_pk from fact_entity_detection fed where entity_pk in (
+    select entity_pk from dim_entity where entity_name in {})))))))
+    group by da.author_pk 
+    order by count(*) desc'''
+    if len(entity_list)==1:
+        df_aut=load_df_from_query(engine, auth_sql.format("('" + entity_list[0] + "')"))
+    else:
+        df_aut=load_df_from_query(engine, auth_sql.format(tuple(entity_list)))
+    aut_gr=df_aut.groupby(['surname']).agg({
+        'firstname': non_missing_longest,
+        'middlename': non_missing_longest,
+        'email': non_missing_longest,
+        'department': non_missing_longest,
+        'institution': non_missing_longest,
+        'country': non_missing_longest,
+        'count': 'sum'
+    }).reset_index()
+    aut_gr=aut_gr.sort_values(by='count', ascending=True, ignore_index=True)[-15:]
+    aut_fig=px.bar(
+        aut_gr, x='count', y='surname', 
+        color_discrete_sequence=px.colors.sequential.Plasma, 
+        #text='firstname', 
+        hover_data=['surname', 'firstname', 'middlename', 'email', 'department', 'institution', 'country']
+        )
+    aut_fig.update_traces(textangle=0)
+    return aut_fig

@@ -6,10 +6,10 @@ import pandas as pd
 import utils.functions as fu
 from utils.db_credentials import dwh_db_connection_params
 from dash.exceptions import PreventUpdate
-import dash_daq as daq
-#import dash_bootstrap_components as dbc
+#import dash_daq as daq
+import dash_bootstrap_components as dbc
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css'] # dbc.themes.QUARTZ is the most beautiful one but less serious, FLATLY
+external_stylesheets = [dbc.themes.FLATLY] # dbc.themes.QUARTZ is the most beautiful one but less serious, FLATLY https://codepen.io/chriddyp/pen/bWLwgP.css
 
 engine=fu.initialize_engine(dwh_db_connection_params)
 dim_ent=fu.load_full_table(engine, 'dim_entity')
@@ -20,23 +20,31 @@ df_k=fu.prep_df_for_display(engine)
 app=dash.Dash(__name__ , external_stylesheets=external_stylesheets, suppress_callback_exceptions=True) #prevent_initial_callbacks=True
 
 
-
-app.layout=html.Div(
-    children=[
-        html.H2('Welcome to the Systematic Review Dashboard'),
-        html.P('This Dashboard was designed on top of a Data-Warehouse of Scientific Literature and can help you understand the current state of research or to find suitable papers to quote for a specific methodology. Try it out!'), 
-        html.Div(children=[
-            html.H4('Understand the current body of knowledge for your topic', style={'width': '29%', 'display': 'inline-block', 'padding': '10px'}),
-            daq.ToggleSwitch(
-                id='toggle_function',
-                value=True,
-                size=100,
-                style={'width': '29%', 'display': 'inline-block', 'padding': '10px'}
+tab_info_content=dbc.Card(
+    dbc.CardBody(
+        [
+            html.H1('Welcome to the Systematic Review Dashboard'),
+            html.P(
+                'This Dashboard was designed on top of a Data-Warehouse of Scientific Literature and can help you understand the current state of research '
+                'or to find suitable papers to quote for a specific methodology. Try it out!',
+                className='lead'), 
+            html.Hr(),
+            dcc.Markdown(
+                '''Under the tab *Publication analysis* you can search publications by keyword or by entities (such as topic, region or coneptual method) and visualize
+                similarities and differences between publications, analyse publications metadata and see detailed infos about a specific paper.    
+                The tab *Reference search* is designed to help you for example with your theoretical concepts / methodology chapter. Which paper and which authors have been quoted often
+                for your concept of interest? '''
             ),
-            html.H4('Which paper and who have been referenced often for your topic?', style={'width': '29%', 'display': 'inline-block', 'padding': '10px'})
-        ]),
-        html.Div(id='search papers', children=[
-            html.H5('Paper Search'),
+            dbc.Button('Learn more')
+        ]
+    )
+)
+
+tab_paper_analysis=dbc.Card(
+    dbc.CardBody(
+        [
+            html.Div(id='search papers', children=[
+            html.H2('Understand the current body of knowledge for your topic'),
             html.Div(children=[
                 html.Div("Search keyword in column: "),
                 dcc.Input(id='search_term', type='text'),#, value='ontology'
@@ -86,30 +94,88 @@ app.layout=html.Div(
                     ],
                     style={'width': '22%', 'padding': '10px', 'vertical-align': 'top', 'display': 'inline-block'})
                 ]),
-            html.Button(id='submit_entity_search', n_clicks=0, children='Submit Entity Search')
-            ], 
-            style={'width': '60%', 'float': 'right', 'display': 'inline-block', 'padding': '10px', 'border-style': 'solid', 'border-width': '1px', 'border-color': '#b1dcfa'}
-            ),    
-            html.Br(),
-            html.Div(id='searched_term'),
-            html.Div(id='click_counter'),
-            html.Br(),
-            dcc.Loading(id='loading1', type='cube', children=[
-                html.Div(id='for_select_all_btn'),
-                html.Div(id='search_output', children=dash_table.DataTable(id='search_result_table'))
-                ])
-        ]),
-        html.Div(id='analyse_papers', children=[
-            html.Div(id='manual_selected_papers'),
-            html.Div(id='for_analysis_button'),
-            html.Div(id='for_paper_checkboxes'),
-            html.Div(id='for_content_comparison_button'),
-            html.Div(id='parallel_categories_overview'),
-            html.Div(id='for_metadata_button'),
-            html.Div(id='metadata_figures')
-        ])     
-])
+                html.Button(id='submit_entity_search', n_clicks=0, children='Submit Entity Search')
+                ], 
+                style={'width': '60%', 'float': 'right', 'display': 'inline-block', 'padding': '10px', 'border-style': 'solid', 'border-width': '1px', 'border-color': '#b1dcfa'}
+                ),    
+                html.Br(),
+                html.Div(id='searched_term'),
+                html.Div(id='click_counter'),
+                html.Br(),
+                dcc.Loading(id='loading1', type='cube', children=[
+                    html.Div(id='for_select_all_btn'),
+                    html.Div(id='search_output', children=dash_table.DataTable(id='search_result_table'))
+                    ])
+            ]),
+            #TODO change this to dbc.Accordion or dbc.Collapse to reduce scrolling
+            html.Div(id='analyse_papers', children=[
+                html.Div(id='manual_selected_papers'),
+                html.Div(id='for_analysis_button'),
+                #TODO change this to dbc.Offcanvas
+                html.Div(id='for_paper_checkboxes'),
+                html.Div(id='for_content_comparison_button'),
+                html.Div(id='parallel_categories_overview'),
+                html.Div(id='for_metadata_button'),
+                html.Div(id='metadata_figures')
+            ])
+        ]
+    )
+)
 
+tab_ref_analysis=dbc.Card(
+    dbc.CardBody(
+        [
+            html.H2('Which sources have been referenced often for your topic?'),
+            html.Div(
+                [
+                    html.Div([
+                        'Entity Label: ',
+                        dcc.Dropdown(id='dropdown_labels_ref', options=fu.get_label_options(dim_ent),
+                            )#value='TOPIC'
+                    ],
+                    style={'width': '29%','padding': '10px', 'vertical-align': 'top', 'display': 'inline-block'}),
+                    html.Div([
+                        'available entities: ',
+                        dcc.Dropdown(id='entity_name_ref', 
+                        )#value='open source'
+                    ],
+                    style={'width': '29%', 'padding': '10px', 'vertical-align': 'top', 'display': 'inline-block'}),
+                    html.Div([
+                        'include child entities?',
+                        dbc.RadioItems(
+                            id='include_child_ents_ref',
+                            options=[
+                                {'label': 'Yes', 'value': 1},
+                                {'label': 'No', 'value': 0}
+                            ],
+                            value=0
+                        ),
+                        html.Div(id='implied_child_entities_ref')
+                    ],
+                    style={'width': '22%', 'padding': '10px', 'vertical-align': 'top', 'display': 'inline-block'})
+                ]
+            ),
+            dbc.Button(id='entity_search_ref_btn', n_clicks=0, children='Submit entity search'),
+            html.Br(),
+            html.Div(id='for_ref_results')
+        ]
+    )
+)
+
+app.layout=dbc.Container(
+    [
+        dbc.Tabs(
+            [
+                dbc.Tab(tab_info_content, label='Info'),
+                dbc.Tab(tab_paper_analysis, label='Publication analysis'),
+                dbc.Tab(tab_ref_analysis, label='Reference search')
+            ]
+        )    
+    ],
+    fluid=True
+       
+)
+#CALLBACK FUNCTIONS FOR PUBLICATION ANALYSIS TAB
 @app.callback(
     Output(component_id='searched_term', component_property='children'),
     Output(component_id='click_counter', component_property='children'),
@@ -160,11 +226,14 @@ def update_entity_options(dropdown_label):
     Input(component_id='include_child_ents', component_property='value')
 )
 def display_included_entitiy_children(chosen_entity, include_child_ents):
-    if include_child_ents==1:
-        child_ents=fu.find_child_entities(dim_ent, ent_hierarchy, chosen_entity)
+    if chosen_entity is None:
+        raise PreventUpdate
     else:
-        child_ents=[]
-    return (', '.join(child_ents))
+        if include_child_ents==1:
+            child_ents=fu.find_child_entities(dim_ent, ent_hierarchy, chosen_entity)
+        else:
+            child_ents=[]
+        return (', '.join(child_ents))
 
 @app.callback(
     Output('search_result_table', 'selected_rows'),
@@ -254,6 +323,55 @@ def update_metadata_analysis(n_clicks, checked_paper_pks):
             dcc.Graph(figure=fig_journals, style={'width': '30%', 'vertical-align': 'top', 'display': 'inline-block'}), 
             dcc.Graph(figure=fig_institutes, style={'width': '30%', 'vertical-align': 'top', 'display': 'inline-block'})
             ]
+
+
+#CALLBACK FUNCTIONS FOR REFERENCE SEARCH TAB
+@app.callback(
+    Output(component_id='entity_name_ref', component_property='options'),
+    Input(component_id='dropdown_labels_ref', component_property='value')
+)
+def update_entity_options_ref(dropdown_label):
+    options=[]
+    for ent_name in dim_ent[dim_ent['entity_label']==dropdown_label]['entity_name'].to_list():
+        options.append({'label': ent_name, 'value': ent_name})
+    return options
+
+@app.callback(
+    Output(component_id='implied_child_entities_ref', component_property='children'),
+    Input(component_id='entity_name_ref', component_property='value'),
+    Input(component_id='include_child_ents_ref', component_property='value')
+)
+def display_included_entitiy_children_ref(chosen_entity, include_child_ents):
+    if chosen_entity is None:
+        raise PreventUpdate
+    else:
+        if include_child_ents==1:
+            child_ents=fu.find_child_entities(dim_ent, ent_hierarchy, chosen_entity)
+        else:
+            child_ents=[]
+        return (', '.join(child_ents))
+
+@app.callback(
+    Output(component_id='for_ref_results', component_property='children'),
+    Input(component_id='entity_search_ref_btn', component_property='n_clicks'),
+    State(component_id='entity_name_ref', component_property='value'),
+    State(component_id='implied_child_entities_ref', component_property='children')
+)
+def update_reference_results(button_submit, ent_name, child_entities):
+    if button_submit==0:
+        raise PreventUpdate
+    else:
+        if child_entities:
+            search_ents=child_entities.split(', ')
+        else:
+            search_ents=[ent_name]
+        title_fig=fu.get_barchart_of_most_relevant_citations(search_ents, engine, 15)
+        aut_fig=fu.get_barchart_of_most_influential_authors(search_ents, engine, 15)
+        return html.Div([
+            dcc.Graph(id='most_pop_ref', figure=title_fig),
+            dcc.Graph(id='most_influential_authors', figure=aut_fig)
+        ])
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)
