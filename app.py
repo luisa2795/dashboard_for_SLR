@@ -9,7 +9,7 @@ from dash.exceptions import PreventUpdate
 #import dash_daq as daq
 import dash_bootstrap_components as dbc
 
-external_stylesheets = [dbc.themes.FLATLY] # dbc.themes.QUARTZ is the most beautiful one but less serious, FLATLY https://codepen.io/chriddyp/pen/bWLwgP.css
+external_stylesheets = [dbc.themes.FLATLY ] # dbc.themes.QUARTZ is the most beautiful one but less serious, FLATLY https://codepen.io/chriddyp/pen/bWLwgP.css
 
 engine=fu.initialize_engine(dwh_db_connection_params)
 dim_ent=fu.load_full_table(engine, 'dim_entity')
@@ -47,10 +47,10 @@ tab_paper_analysis=dbc.Card(
             html.H2('Understand the current body of knowledge for your topic'),
             html.Div(children=[
                 html.Div("Search keyword in column: "),
-                dcc.Input(id='search_term', type='text'),#, value='ontology'
+                dbc.Input(id='search_term', type='text', placeholder='Type something'),#, value='ontology'
                 html.Br(),
                 "Select Column: ",
-                dcc.Checklist(id='columns_to_search',
+                dbc.Checklist(id='columns_to_search',
                     options=[
                         {'label': 'Title', 'value': 'title'},
                         {'label': 'Keywords', 'value': 'keywords'},
@@ -60,30 +60,29 @@ tab_paper_analysis=dbc.Card(
                     value=['keywords']
                 ),
                 html.Br(),
-                html.Button(id='submit_search_strings_button', n_clicks=0, children='Submit keyword search'),
+                dbc.Button(id='submit_search_strings_button', n_clicks=0, children='Submit keyword search'),
                 html.Br(),
                 html.Br()
                 ],
-                style={'width': '22%', 'display': 'inline-block', 'padding': '10px', 'border-style': 'solid', 'border-width': '1px', 'border-color': '#b1dcfa'}
+                style={'width': '22%', 'display': 'inline-block', 'padding': '10px'} #, 'border-style': 'solid', 'border-width': '1px', 'border-color': '#b1dcfa'
             ),
             html.Div(children=[
                 html.Div("Search entities: "),
                 html.Div([
                     html.Div([
                         'Entity Label: ',
-                        dcc.Dropdown(id='dropdown_labels', options=fu.get_label_options(dim_ent),
+                        dbc.Select(id='dropdown_labels', options=fu.get_label_options(dim_ent),
                             )#value='TOPIC'
                     ],
                     style={'width': '29%','padding': '10px', 'vertical-align': 'top', 'display': 'inline-block'}),
                     html.Div([
                         'available entities: ',
-                        dcc.Dropdown(id='entity_name', 
-                        )#value='open source'
+                        dbc.Select(id='entity_name')
                     ],
                     style={'width': '29%', 'padding': '10px', 'vertical-align': 'top', 'display': 'inline-block'}),
                     html.Div([
                         'include child entities?',
-                        dcc.RadioItems(id='include_child_ents',
+                        dbc.RadioItems(id='include_child_ents',
                         options=[
                             {'label': 'Yes', 'value': 1},
                             {'label': 'No', 'value': 0}
@@ -94,9 +93,9 @@ tab_paper_analysis=dbc.Card(
                     ],
                     style={'width': '22%', 'padding': '10px', 'vertical-align': 'top', 'display': 'inline-block'})
                 ]),
-                html.Button(id='submit_entity_search', n_clicks=0, children='Submit Entity Search')
+                dbc.Button(id='submit_entity_search', n_clicks=0, children='Submit Entity Search')
                 ], 
-                style={'width': '60%', 'float': 'right', 'display': 'inline-block', 'padding': '10px', 'border-style': 'solid', 'border-width': '1px', 'border-color': '#b1dcfa'}
+                style={'width': '60%', 'float': 'right', 'display': 'inline-block', 'padding': '10px'}
                 ),    
                 html.Br(),
                 html.Div(id='searched_term'),
@@ -110,12 +109,18 @@ tab_paper_analysis=dbc.Card(
             #TODO change this to dbc.Accordion or dbc.Collapse to reduce scrolling
             html.Div(id='analyse_papers', children=[
                 html.Div(id='manual_selected_papers'),
+                html.Br(),
                 html.Div(id='for_analysis_button'),
+                html.Br(),
                 #TODO change this to dbc.Offcanvas
                 html.Div(id='for_paper_checkboxes'),
+                html.Br(),
                 html.Div(id='for_content_comparison_button'),
+                html.Br(),
                 html.Div(id='parallel_categories_overview'),
+                html.Br(),
                 html.Div(id='for_metadata_button'),
+                html.Br(),
                 html.Div(id='metadata_figures')
             ])
         ]
@@ -206,8 +211,8 @@ def update_result_table(submit_search_strings_button_clicks, submit_entity_searc
             result_df=fu.filter_df_by_entity(df_k, dropdown_labels, implied_child_entities, entity_name, include_child_ents)
             searchterm='Your searched entity: {}'.format(entity_name)
             table=fu.generate_result_table(result_df)
-    clicks='Your clicked {} times.'.format(submit_search_strings_button_clicks + submit_entity_search)
-    return searchterm, clicks, html.Button(id='select_all_button', n_clicks=0, children='Select all'), table
+    clicks='You clicked {} times.'.format(submit_search_strings_button_clicks + submit_entity_search)
+    return searchterm, clicks, dbc.Button(id='select_all_button', n_clicks=0, children='Select all'), table
     
 
 @app.callback(
@@ -274,10 +279,11 @@ def update_selected_titles(previously_selected_papers, derived_virtual_data, der
 )
 def show_analysis_button_upon_selection(manual_selected_papers):
     if manual_selected_papers:
-        return html.Button(id='move_to_analysis_button', n_clicks=0, children='Search finished, move to analysis')
+        return dbc.Button(id='move_to_analysis_button', n_clicks=0, children='Search finished, move to analysis')
     else: 
         raise PreventUpdate
 
+###################
 @app.callback(
     [
         Output(component_id='for_paper_checkboxes', component_property='children'),
@@ -290,11 +296,25 @@ def show_analysis_button_upon_selection(manual_selected_papers):
 def show_content_and_metadata_buttons_upon_analysis_start(analysis_clicks, selected_papers_string):
     if analysis_clicks!=0:
         return [
-            fu.get_checkboxes_from_selected_papers(selected_papers_string, df_k),
-            html.Button(id='content_comparison_button', n_clicks=0, children='Compare content of selected literature'), 
-            html.Button(id='analyse_metadata_button', n_clicks=0, children='Analyse metadata of selected literature')]
+            [
+                dbc.Offcanvas(fu.get_checkboxes_from_selected_papers(selected_papers_string, df_k), id='selection_offcanvas', title='your selection', is_open=True),
+                dbc.Button(id='open_offcanvas', children='edit selection', n_clicks=0)
+            ],
+            dbc.Button(id='content_comparison_button', n_clicks=0, children='Compare content of selected literature'), 
+            dbc.Button(id='analyse_metadata_button', n_clicks=0, children='Analyse metadata of selected literature')
+        ]
     else: 
         raise PreventUpdate
+
+@app.callback(
+    Output(component_id='selection_offcanvas', component_property='is_open'),
+    Input(component_id='open_offcanvas', component_property='n_clicks'),
+    [State(component_id='selection_offcanvas', component_property='is_open')]
+)
+def toggle_offcanvas(n_clicks, is_open):
+    if n_clicks:
+        return not is_open
+    return is_open
 
 @app.callback(
     Output(component_id='parallel_categories_overview', component_property='children'),
