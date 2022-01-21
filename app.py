@@ -44,124 +44,76 @@ tab_paper_analysis=dbc.Card(
     dbc.CardBody(
         [
             html.Div(id='search papers', children=[
-            html.H2('Understand the current body of knowledge for your topic'),
-            html.Div(children=[
-                html.Div("Search keyword in column: "),
-                dbc.Input(id='search_term', type='text', placeholder='Type something'),#, value='ontology'
-                html.Br(),
-                "Select Column: ",
-                dbc.Checklist(id='columns_to_search',
-                    options=[
-                        {'label': 'Title', 'value': 'title'},
-                        {'label': 'Keywords', 'value': 'keywords'},
-                        {'label': 'Abstract', 'value': 'abstract'},
-                        {'label': 'search all fields', 'value': 'entire_df'},
-                    ],
-                    value=['keywords']
-                ),
-                html.Br(),
-                dbc.Button(id='submit_search_strings_button', n_clicks=0, children='Submit keyword search'),
-                html.Br(),
-                html.Br()
-                ],
-                style={'width': '22%', 'display': 'inline-block', 'padding': '10px'} #, 'border-style': 'solid', 'border-width': '1px', 'border-color': '#b1dcfa'
-            ),
-            html.Div(children=[
-                html.Div("Search entities: "),
-                html.Div([
-                    html.Div([
-                        'Entity Label: ',
-                        dbc.Select(id='dropdown_labels', options=fu.get_label_options(dim_ent),
-                            )#value='TOPIC'
-                    ],
-                    style={'width': '29%','padding': '10px', 'vertical-align': 'top', 'display': 'inline-block'}),
-                    html.Div([
-                        'available entities: ',
-                        dbc.Select(id='entity_name')
-                    ],
-                    style={'width': '29%', 'padding': '10px', 'vertical-align': 'top', 'display': 'inline-block'}),
-                    html.Div([
-                        'include child entities?',
-                        dbc.RadioItems(id='include_child_ents',
+                html.H2('Understand the current body of knowledge for your topic'),
+                html.Div(children=[
+                    html.Div("Search keyword in column: "),
+                    dbc.Input(id='search_term', type='text', placeholder='Type something'),#, value='ontology'
+                    html.Br(),
+                    "Select Column: ",
+                    dbc.Checklist(id='columns_to_search',
                         options=[
-                            {'label': 'Yes', 'value': 1},
-                            {'label': 'No', 'value': 0}
+                            {'label': 'Title', 'value': 'title'},
+                            {'label': 'Keywords', 'value': 'keywords'},
+                            {'label': 'Abstract', 'value': 'abstract'},
+                            {'label': 'search all fields', 'value': 'entire_df'},
                         ],
-                        value=0
-                        ),
-                        html.Div(id='implied_child_entities')
+                        value=['keywords']
+                    ),
+                    html.Br(),
+                    dbc.Button(id='submit_search_strings_button', n_clicks=0, children='Submit keyword search'),
+                    html.Br(),
+                    html.Br()
                     ],
-                    style={'width': '22%', 'padding': '10px', 'vertical-align': 'top', 'display': 'inline-block'})
-                ]),
-                dbc.Button(id='submit_entity_search', n_clicks=0, children='Submit Entity Search')
-                ], 
-                style={'width': '60%', 'float': 'right', 'display': 'inline-block', 'padding': '10px'}
-                ),    
-                html.Br(),
-                html.Div(id='searched_term'),
-                html.Div(id='click_counter'),
-                html.Br(),
-                dcc.Loading(id='loading1', type='cube', children=[
-                    html.Div(id='search_output', children=dash_table.DataTable(id='search_result_table')),
-                    html.Div(id='for_select_all_btn')
-                    ])
-            ]),
-            
-            html.Div(id='analyse_papers', children=[
-                dbc.Accordion(
-                    id='analysis_accordion',
-                    children=[
-                        dbc.AccordionItem(
-                            title='Selected Papers',
-                            children=[
-                                html.Div(id='manual_selected_papers'),
-                                html.Br(),
-                                html.Div(id='for_analysis_button'),
-                                html.Br(),
-                                html.Div(id='for_paper_checkboxes'),
-                            ]
-                        ),
-                        dbc.AccordionItem(
-                            title='Compare all content categories',
-                            children=[
-                                html.Div(id='too_many_papers_warning'),
-                                html.Div(id='for_content_comparison_button'),
-                                html.Br(),
-                                html.Div(id='parallel_categories_overview'),
-                                html.Br(),
-                            ]
-                        ),
-                        dbc.AccordionItem(
-                            title='Compare categories in detail',
-                            children=[
-                                html.Div(id='for_cat_heatmap_analysis')
-                            ]
-                        ),
-                        dbc.AccordionItem(
-                            title='Compare Metadata',
-                            children=[
-                                html.Div(id='for_metadata_button'),
-                                html.Br(),
-                                html.Div(id='metadata_figures')
-                            ]
-                        )
-                    ],
-                    flush=True
+                    style={'width': '22%', 'display': 'inline-block', 'padding': '10px'} #, 'border-style': 'solid', 'border-width': '1px', 'border-color': '#b1dcfa'
                 ),
-                # html.Div(id='manual_selected_papers'),
-                # html.Br(),
-                # html.Div(id='for_analysis_button'),
-                # html.Br(),
-                # html.Div(id='for_paper_checkboxes'),
-                # html.Br(),
-                # html.Div(id='for_content_comparison_button'),
-                # html.Br(),
-                # html.Div(id='parallel_categories_overview'),
-                # html.Br(),
-                # html.Div(id='for_metadata_button'),
-                # html.Br(),
-                # html.Div(id='metadata_figures')
-            ])
+                html.Div(children=[
+                    html.Div("Search entities: "),
+                    html.Div([
+                        html.Div([
+                            'Entity Label: ',
+                            dbc.Select(id='dropdown_labels', options=fu.get_label_options(dim_ent),
+                                )#value='TOPIC'
+                        ],
+                        style={'width': '29%','padding': '10px', 'vertical-align': 'top', 'display': 'inline-block'}),
+                        html.Div([
+                            'available entities: ',
+                            dbc.Select(id='entity_name')
+                        ],
+                        style={'width': '29%', 'padding': '10px', 'vertical-align': 'top', 'display': 'inline-block'}),
+                        html.Div([
+                            'include child entities?',
+                            dbc.RadioItems(id='include_child_ents',
+                            options=[
+                                {'label': 'Yes', 'value': 1},
+                                {'label': 'No', 'value': 0}
+                            ],
+                            value=0
+                            ),
+                            html.Div(id='implied_child_entities')
+                        ],
+                        style={'width': '22%', 'padding': '10px', 'vertical-align': 'top', 'display': 'inline-block'})
+                    ]),
+                    dbc.Button(id='submit_entity_search', n_clicks=0, children='Submit Entity Search')
+                    ], 
+                    style={'width': '60%', 'float': 'right', 'display': 'inline-block', 'padding': '10px'}
+                    ),    
+                    html.Br(),
+                    html.Div(id='searched_term'),
+                    html.Div(id='click_counter'),
+                    html.Br(),
+                    dcc.Loading(id='loading1', type='cube', children=[
+                        html.Div(id='search_output', children=dash_table.DataTable(id='search_result_table')),
+                        html.Div(id='for_select_all_btn')
+                        ])
+            ]),
+            html.Div(id='analyse_papers', children=[
+                html.Div(id='manual_selected_papers'),
+                html.Br(),
+                html.Div(id='for_analysis_button'),
+                html.Br(),
+                html.Div(id='for_paper_checkboxes'),
+                html.Div(id='for_accordion_div')
+            ]),
         ]
     )
 )
@@ -325,54 +277,72 @@ def show_analysis_button_upon_selection(manual_selected_papers):
 @app.callback(
     [
         Output(component_id='for_paper_checkboxes', component_property='children'),
-        Output(component_id='too_many_papers_warning', component_property='children'),
-        Output(component_id='for_content_comparison_button', component_property='children'),
-        Output(component_id='for_cat_heatmap_analysis', component_property='children'),
-        Output(component_id='for_metadata_button', component_property='children')
+        Output(component_id='for_accordion_div', component_property='children')
     ],
     Input(component_id='move_to_analysis_button', component_property='n_clicks'),
     State(component_id='manual_selected_papers', component_property='children')
 )
-def show_content_and_metadata_buttons_upon_analysis_start(analysis_clicks, selected_papers_string):
+def show_accordion(analysis_clicks, selected_papers_string):
     if analysis_clicks!=0:
-        no_papers=len(selected_papers_string.split(', '))
-        if no_papers>15:
-            warning_message=html.P('You selected more than 15 papers. The following diagram will be hard to read and will probably take long to compute. Consider reducing your selection or rather use the function to compare only two categories in detail.', style={'color': 'red'})
-        else:
-            warning_message=html.P('You will get an overview over the the papers similarities and differences in the different content categories (entities) :-)', style={'color':'green'})
         return [
             [
                 dbc.Offcanvas(fu.get_checkboxes_from_selected_papers(selected_papers_string, df_k), id='selection_offcanvas', title='your selection', is_open=True),
                 dbc.Button(id='open_offcanvas', children='edit selection', color='secondary', n_clicks=0)
             ],
-            warning_message,
-            dbc.Button(id='content_comparison_button', n_clicks=0, children='Okay, go!'),
-            [
-                html.Div(
-                    [
-                        html.P('Select x-axis and drill down or roll up the selected category. Highest aggregation: 0'),
-                        dbc.Select(id='x_axis', placeholder='Select x-axis category', options=fu.get_label_options(dim_ent), style={'width': '20%', 'display':'inline-block', 'padding': '5px'}),
-                        dbc.Input(id='x_level', type='number', min=0, max=8, step=1, value=0, style={'width': '10%', 'display':'inline-block', 'padding': '5px'}),
-                    ],
-                    style={'padding': '10px'}
-                ),
-                html.Div(
-                    [
-                        
-                        html.P('Select y-axis and drill down or roll up the selected category. Highest aggregation: 0'),
-                        dbc.Select(id='y_axis', placeholder='Select x-axis category', options=fu.get_label_options(dim_ent), style={'width': '20%', 'display':'inline-block', 'padding': '5px'}),
-                        dbc.Input(id='y_level', type='number', min=0, max=8, step=1, value=0, style={'width': '10%', 'display':'inline-block', 'padding': '5px'}),
-                    ],
-                    style={'padding': '10px'}
-                ),
-                dbc.Button(id='submit_axes', children='Go!', n_clicks=0),
-                html.Div(
-                    [
-                        dbc.Spinner(html.Div(id='div_for_heatmap'))
-                    ]
-                )
-            ], 
-            dbc.Button(id='analyse_metadata_button', n_clicks=0, children='Analyse metadata of selected literature')
+            dbc.Accordion(
+                id='analysis_accordion',
+                children=[
+                    dbc.AccordionItem(
+                        title='Compare all content categories',
+                        children=[
+                            html.Div(id='too_many_papers_warning'),
+                            dbc.Button(id='content_comparison_button', n_clicks=0, children='Okay, go!'),
+                            html.Br(),
+                            html.Div(id='parallel_categories_overview'),
+                            html.Br(),
+                        ],
+                        item_id='parcats_item'
+                    ),
+                    dbc.AccordionItem(
+                        title='Compare categories in detail',
+                        children=[
+                            html.Div(
+                                [
+                                    html.P('Select x-axis and drill down or roll up the selected category. Highest aggregation: 0'),
+                                    dbc.Select(id='x_axis', placeholder='Select x-axis category', options=fu.get_label_options(dim_ent), style={'width': '20%', 'display':'inline-block', 'padding': '5px'}),
+                                    dbc.Input(id='x_level', type='number', min=0, max=8, step=1, value=1, style={'width': '10%', 'display':'inline-block', 'padding': '5px'}),
+                                ],
+                                style={'padding': '10px'}
+                            ),
+                            html.Div(
+                                [
+                                    
+                                    html.P('Select y-axis and drill down or roll up the selected category. Highest aggregation: 0'),
+                                    dbc.Select(id='y_axis', placeholder='Select x-axis category', options=fu.get_label_options(dim_ent), style={'width': '20%', 'display':'inline-block', 'padding': '5px'}),
+                                    dbc.Input(id='y_level', type='number', min=0, max=8, step=1, value=1, style={'width': '10%', 'display':'inline-block', 'padding': '5px'}),
+                                ],
+                                style={'padding': '10px'}
+                            ),
+                            dbc.Button(id='submit_axes', children='Go!', n_clicks=0),
+                            html.Div(
+                                [
+                                    dbc.Spinner(html.Div(id='div_for_bubblechart'))
+                                ]
+                            )
+                        ]
+                    ),
+                    dbc.AccordionItem(
+                        title='Compare Metadata',
+                        children=[
+                            dbc.Button(id='analyse_metadata_button', n_clicks=0, children='Analyse metadata of selected literature'),
+                            html.Br(),
+                            html.Div(id='metadata_figures')
+                        ]
+                    )
+                ],
+                start_collapsed=True,
+                flush=True
+            )
         ]
     else: 
         raise PreventUpdate
@@ -388,6 +358,22 @@ def toggle_offcanvas(n_clicks, is_open):
     return is_open
 
 @app.callback(
+    Output(component_id='too_many_papers_warning', component_property='children'),
+    Input(component_id='analysis_accordion', component_property='active_item'),
+    State(component_id='analysis_papers_checklist', component_property='value')
+)
+def update_too_many_papers_warning(item, checked_papers):
+    if item=='parcats_item':
+        no_papers=len(checked_papers)
+        if no_papers>15:
+            warning_message=html.P('You selected more than 15 papers. The following diagram will be hard to read and will probably take long to compute. Consider reducing your selection or rather use the function to compare only two categories in detail.', style={'color': 'red'})
+        else:
+            warning_message=html.P('You will get an overview over the the papers similarities and differences in the different content categories (entities) :-)', style={'color':'green'})
+        return warning_message
+    else:
+        raise PreventUpdate
+
+@app.callback(
     Output(component_id='parallel_categories_overview', component_property='children'),
     Input(component_id='content_comparison_button', component_property='n_clicks'),
     State(component_id='analysis_papers_checklist', component_property='value')
@@ -401,7 +387,7 @@ def update_content_analysis(n_clicks, checked_paper_pks):
 
 
 @app.callback(
-    Output(component_id='div_for_heatmap', component_property='children'),
+    Output(component_id='div_for_bubblechart', component_property='children'),
     Input(component_id='submit_axes', component_property='n_clicks'),
     State(component_id='x_axis', component_property='value'),
     State(component_id='x_level', component_property='value'),
