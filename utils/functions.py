@@ -105,6 +105,20 @@ def filter_df_by_entity(df, dropdown_labels, implied_child_entities, entity_name
         matches=df[df[dropdown_labels.lower()]==ent]
         result_df=pd.concat([result_df, matches])
     return result_df
+
+def drill_to_level(ent_name, level, dim_ent, ent_hierarchy):
+    if ent_name=='MISSING':
+        return 'MISSING'
+    else:
+        ent_pk=dim_ent[dim_ent['entity_name']==ent_name]['entity_pk'].values[0]
+        #get depth from level 0 (the maximum depth for this entity)
+        all_parents=ent_hierarchy[ent_hierarchy['child_entity_pk']==ent_pk]
+        depth_from_level_zero=all_parents['depth_from_parent'].max()
+        #now try drill down to desired level, if that is not possible return last possible level (the initial ent itself)
+        try:
+            return dim_ent[dim_ent['entity_pk']==(all_parents[all_parents['depth_from_parent']==(depth_from_level_zero-level)]['parent_entity_pk'].values[0])]['entity_name'].values[0]
+        except:
+            return ent_name
     
 
 #VISUALIZATION
@@ -214,6 +228,20 @@ def generate_parallel_categories_overview_graph(selected_pks_list, df_complete):
     fig.layout.annotations[1].update(y=0.66, font={'size': 18}, x=0.05, xanchor= 'left')
     fig.layout.annotations[2].update(y=0.275, font={'size': 18}, x=0.05, xanchor= 'left')
     return fig
+
+def generate_bubblechart(x_value, y_value, checked_paper_pks, df_complete, dim_ent, ent_hierarchy, x_level=0, y_level=0):
+    filtered_df=df_complete[df_complete.paper_pk.isin(checked_paper_pks)][[x_value, y_value]]
+    filtered_df=filtered_df[(filtered_df[x_value]!='MISSING') & (filtered_df[y_value]!='MISSING')]
+    #aggregate the axes to the desired level
+    filtered_df[x_value]=filtered_df[x_value].apply(lambda x: drill_to_level(x, x_level, dim_ent, ent_hierarchy))
+    filtered_df[y_value]=filtered_df[y_value].apply(lambda y: drill_to_level(y, y_level, dim_ent, ent_hierarchy))
+    #groupby selected categories and count group sizes, then remove MISSING
+    df_grouped=filtered_df.groupby([x_value, y_value]).size().reset_index(name='counts')
+    #df_grouped=df_grouped[(df_grouped[x_value]!='MISSING') & (df_grouped[y_value]!='MISSING')]
+    #make from long format df a wide format df
+    fig=px.scatter(data_frame=df_grouped, x=x_value, y=y_value, size='counts')
+    return fig
+
 
 def generate_metadata_graphs(checked_paper_pks, df_complete, engine):
     filtered_df=df_complete[df_complete.paper_pk.isin(checked_paper_pks)]

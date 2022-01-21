@@ -102,26 +102,65 @@ tab_paper_analysis=dbc.Card(
                 html.Div(id='click_counter'),
                 html.Br(),
                 dcc.Loading(id='loading1', type='cube', children=[
-                    html.Div(id='for_select_all_btn'),
-                    html.Div(id='search_output', children=dash_table.DataTable(id='search_result_table'))
+                    html.Div(id='search_output', children=dash_table.DataTable(id='search_result_table')),
+                    html.Div(id='for_select_all_btn')
                     ])
             ]),
-            #TODO change this to dbc.Accordion or dbc.Collapse to reduce scrolling
+            
             html.Div(id='analyse_papers', children=[
-                html.Div(id='manual_selected_papers'),
-                html.Br(),
-                html.Div(id='for_analysis_button'),
-                html.Br(),
-                #TODO change this to dbc.Offcanvas
-                html.Div(id='for_paper_checkboxes'),
-                html.Br(),
-                html.Div(id='for_content_comparison_button'),
-                html.Br(),
-                html.Div(id='parallel_categories_overview'),
-                html.Br(),
-                html.Div(id='for_metadata_button'),
-                html.Br(),
-                html.Div(id='metadata_figures')
+                dbc.Accordion(
+                    id='analysis_accordion',
+                    children=[
+                        dbc.AccordionItem(
+                            title='Selected Papers',
+                            children=[
+                                html.Div(id='manual_selected_papers'),
+                                html.Br(),
+                                html.Div(id='for_analysis_button'),
+                                html.Br(),
+                                html.Div(id='for_paper_checkboxes'),
+                            ]
+                        ),
+                        dbc.AccordionItem(
+                            title='Compare all content categories',
+                            children=[
+                                html.Div(id='too_many_papers_warning'),
+                                html.Div(id='for_content_comparison_button'),
+                                html.Br(),
+                                html.Div(id='parallel_categories_overview'),
+                                html.Br(),
+                            ]
+                        ),
+                        dbc.AccordionItem(
+                            title='Compare categories in detail',
+                            children=[
+                                html.Div(id='for_cat_heatmap_analysis')
+                            ]
+                        ),
+                        dbc.AccordionItem(
+                            title='Compare Metadata',
+                            children=[
+                                html.Div(id='for_metadata_button'),
+                                html.Br(),
+                                html.Div(id='metadata_figures')
+                            ]
+                        )
+                    ],
+                    flush=True
+                ),
+                # html.Div(id='manual_selected_papers'),
+                # html.Br(),
+                # html.Div(id='for_analysis_button'),
+                # html.Br(),
+                # html.Div(id='for_paper_checkboxes'),
+                # html.Br(),
+                # html.Div(id='for_content_comparison_button'),
+                # html.Br(),
+                # html.Div(id='parallel_categories_overview'),
+                # html.Br(),
+                # html.Div(id='for_metadata_button'),
+                # html.Br(),
+                # html.Div(id='metadata_figures')
             ])
         ]
     )
@@ -283,11 +322,12 @@ def show_analysis_button_upon_selection(manual_selected_papers):
     else: 
         raise PreventUpdate
 
-###################
 @app.callback(
     [
         Output(component_id='for_paper_checkboxes', component_property='children'),
+        Output(component_id='too_many_papers_warning', component_property='children'),
         Output(component_id='for_content_comparison_button', component_property='children'),
+        Output(component_id='for_cat_heatmap_analysis', component_property='children'),
         Output(component_id='for_metadata_button', component_property='children')
     ],
     Input(component_id='move_to_analysis_button', component_property='n_clicks'),
@@ -295,12 +335,43 @@ def show_analysis_button_upon_selection(manual_selected_papers):
 )
 def show_content_and_metadata_buttons_upon_analysis_start(analysis_clicks, selected_papers_string):
     if analysis_clicks!=0:
+        no_papers=len(selected_papers_string.split(', '))
+        if no_papers>15:
+            warning_message=html.P('You selected more than 15 papers. The following diagram will be hard to read and will probably take long to compute. Consider reducing your selection or rather use the function to compare only two categories in detail.', style={'color': 'red'})
+        else:
+            warning_message=html.P('You will get an overview over the the papers similarities and differences in the different content categories (entities) :-)', style={'color':'green'})
         return [
             [
                 dbc.Offcanvas(fu.get_checkboxes_from_selected_papers(selected_papers_string, df_k), id='selection_offcanvas', title='your selection', is_open=True),
-                dbc.Button(id='open_offcanvas', children='edit selection', n_clicks=0)
+                dbc.Button(id='open_offcanvas', children='edit selection', color='secondary', n_clicks=0)
             ],
-            dbc.Button(id='content_comparison_button', n_clicks=0, children='Compare content of selected literature'), 
+            warning_message,
+            dbc.Button(id='content_comparison_button', n_clicks=0, children='Okay, go!'),
+            [
+                html.Div(
+                    [
+                        html.P('Select x-axis and drill down or roll up the selected category. Highest aggregation: 0'),
+                        dbc.Select(id='x_axis', placeholder='Select x-axis category', options=fu.get_label_options(dim_ent), style={'width': '20%', 'display':'inline-block', 'padding': '5px'}),
+                        dbc.Input(id='x_level', type='number', min=0, max=8, step=1, value=0, style={'width': '10%', 'display':'inline-block', 'padding': '5px'}),
+                    ],
+                    style={'padding': '10px'}
+                ),
+                html.Div(
+                    [
+                        
+                        html.P('Select y-axis and drill down or roll up the selected category. Highest aggregation: 0'),
+                        dbc.Select(id='y_axis', placeholder='Select x-axis category', options=fu.get_label_options(dim_ent), style={'width': '20%', 'display':'inline-block', 'padding': '5px'}),
+                        dbc.Input(id='y_level', type='number', min=0, max=8, step=1, value=0, style={'width': '10%', 'display':'inline-block', 'padding': '5px'}),
+                    ],
+                    style={'padding': '10px'}
+                ),
+                dbc.Button(id='submit_axes', children='Go!', n_clicks=0),
+                html.Div(
+                    [
+                        dbc.Spinner(html.Div(id='div_for_heatmap'))
+                    ]
+                )
+            ], 
             dbc.Button(id='analyse_metadata_button', n_clicks=0, children='Analyse metadata of selected literature')
         ]
     else: 
@@ -327,6 +398,29 @@ def update_content_analysis(n_clicks, checked_paper_pks):
     else:
         fig=fu.generate_parallel_categories_overview_graph(checked_paper_pks, df_k)
         return(dcc.Graph(figure=fig))
+
+
+@app.callback(
+    Output(component_id='div_for_heatmap', component_property='children'),
+    Input(component_id='submit_axes', component_property='n_clicks'),
+    State(component_id='x_axis', component_property='value'),
+    State(component_id='x_level', component_property='value'),
+    State(component_id='y_axis', component_property='value'),
+    State(component_id='y_level', component_property='value'),
+    State(component_id='analysis_papers_checklist', component_property='value')
+)
+def update_category_bubbles(n_clicks, x_value, x_level, y_value, y_level, checked_paper_pks):
+    if not n_clicks:
+        raise PreventUpdate
+    else: 
+        if not x_value:
+            return 'Select x-axis first.'
+        elif not y_value:
+            return 'Select y-axis first.'
+        else:
+            fig_bubble=fu.generate_bubblechart(x_value.lower(), y_value.lower(), checked_paper_pks, df_k, dim_ent, ent_hierarchy, x_level=x_level, y_level=y_level)
+            return dcc.Graph(figure=fig_bubble)
+
 
 @app.callback(
     Output(component_id='metadata_figures', component_property='children'),
