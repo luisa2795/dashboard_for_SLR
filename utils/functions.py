@@ -2,10 +2,11 @@ import pandas as pd
 import numpy as np
 import re
 from sqlalchemy import create_engine, text
-from dash import dash_table, dcc
+from dash import dash_table, dcc, html
 import plotly.graph_objects as go
 import plotly.subplots as sub
 import plotly.express as px
+import dash_bootstrap_components as dbc
 
 #DB
 def initialize_engine(connection_params):
@@ -281,7 +282,58 @@ def generate_metadata_graphs(checked_paper_pks, df_complete, engine):
     #fig_institutes.update_layout(uniformtext_minsize=9, uniformtext_mode='hide')
     return fig_time, fig_journals, fig_institutes
 
+def get_title_dropdown(selected_papers_string, df_k):
+    filtered_df=get_filtered_df_from_string_of_paper_pks(selected_papers_string, df_k)
+    options=filtered_df[['paper_pk', 'title']].apply(lambda row: {'label': str(row['paper_pk']) + ' - ' + row['title'], 'value': row['paper_pk']}, axis=1).to_list()
+    return options
 
+def get_summary_fields(paper_key, engine, dim_ent):
+    paper_query='select title, year, abstract from dim_paper where paper_pk = {}'.format(paper_key)
+    title_year_abstract=load_df_from_query(engine, paper_query)
+    title=title_year_abstract['title'].values[0]
+    year=title_year_abstract['year'].values[0]
+    abstract=title_year_abstract['abstract'].values[0]
+    keyword_query='select keyword_string from dim_keyword dk where keyword_pk in (select keyword_pk from bridge_paper_keyword bpk where keywordgroup_pk in (select keywordgroup_pk from dim_paper dp where paper_pk = {}))'.format(paper_key)
+    keywords=load_df_from_query(engine, keyword_query)
+    author_query='select author_position, surname, firstname, middlename, email, department, institution, country from (select * from (select authorgroup_pk, keywordgroup_pk, paper_pk, title as paper_title from dim_paper dp where paper_pk = {} ) as pap left join bridge_paper_author bpa on pap.authorgroup_pk = bpa.authorgroup_pk) as agr left join dim_author da on agr.author_pk=da.author_pk'.format(paper_key)
+    authors_df=load_df_from_query(engine, author_query)
+    authors_df.sort_values(by=['author_position'], inplace=True)
+    authors_df.drop(columns='author_position', inplace=True)
+    authors_h5=[]
+    for author in [', '.join(a) for a in [[s for s in sl if s != 'MISSING'] for sl in authors_df.values.tolist()]]:
+        authors_h5.append(html.H5(author))
+    return dbc.Card([
+        dbc.CardBody([
+            html.Br(),
+            html.H3(title, className='card-title'),
+            html.Div(authors_h5, className='card-subtitle'),
+            html.Hr(),
+            html.H4(str(year.year)),
+            html.P(abstract),
+            html.H5('Keywords: ' + ', '.join(keywords['keyword_string'].to_list())),
+            html.Hr(),
+            html.Br(),
+            html.Div(children=[
+                html.P('Analyse a category with Piechart: '),
+                dbc.Select(id='bar_label_sel', options=get_label_options(dim_ent), placeholder='Select category to analyse', style={'width': '50%', 'display':'inline-block', 'padding': '5px'}),
+                dbc.Input(id='bar_level', type='number', min=0, max=8, step=1, value=2, style={'width': '20%', 'display':'inline-block', 'padding': '5px'}),
+                html.Br(),
+                html.Div(id='for_detail_bar')
+            ],
+            style={'width': '45%', 'display':'inline-block'}               
+            ),
+            html.Div(children=[
+                html.P('Analyse a category with Histogram: '),
+                dbc.Select(id='hist_label_sel', options=get_label_options(dim_ent), placeholder='Select category to analyse', style={'width': '50%', 'display':'inline-block', 'padding': '5px'}),
+                dbc.Input(id='hist_level', type='number', min=0, max=8, step=1, value=2, style={'width': '20%', 'display':'inline-block', 'padding': '5px'}),
+                html.Br(),
+                html.Div(id='for_detail_hist')
+            ],
+            style={'width': '50%', 'display':'inline-block', 'float': 'right'}               
+            ),
+            html.Br()
+        ])
+    ])
 
 ###########################
 #REFERENCES VISUALIZATION

@@ -338,6 +338,20 @@ def show_accordion(analysis_clicks, selected_papers_string):
                             html.Br(),
                             html.Div(id='metadata_figures')
                         ]
+                    ),
+                    dbc.AccordionItem(
+                        title='Detail Analysis',
+                        children=[
+                            html.Div(children=[
+                                'Select Paper for Detail Analysis',
+                                dbc.Select(
+                                    id='detail_pk_sel',
+                                    options=fu.get_title_dropdown(selected_papers_string, df_k),
+                                    style={'width': '80%'}
+                                ),
+                                html.Div(id='for_detail_analysis')
+                            ])
+                        ]
                     )
                 ],
                 start_collapsed=True,
@@ -424,6 +438,18 @@ def update_metadata_analysis(n_clicks, checked_paper_pks):
             dcc.Graph(figure=fig_institutes, style={'width': '30%', 'vertical-align': 'top', 'display': 'inline-block'})
             ]
 
+@app.callback(
+    Output(component_id='for_detail_analysis', component_property='children'),
+    Input(component_id='detail_pk_sel', component_property='value')
+)
+def update_detail_analysis(paper_key):
+    if not paper_key:
+        raise PreventUpdate
+    else:
+        summary_div=fu.get_summary_fields(paper_key, engine, dim_ent)
+        return summary_div
+
+#callback for for_detail_bar and for_detail_hist
 
 #CALLBACK FUNCTIONS FOR REFERENCE SEARCH TAB
 @app.callback(
