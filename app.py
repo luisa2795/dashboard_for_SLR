@@ -449,7 +449,34 @@ def update_detail_analysis(paper_key):
         summary_div=fu.get_summary_fields(paper_key, engine, dim_ent)
         return summary_div
 
-#callback for for_detail_bar and for_detail_hist
+@app.callback(
+    Output(component_id='for_detail_pie', component_property='children'),
+    Input(component_id='pie_label_sel', component_property='value'),
+    Input(component_id='pie_level', component_property='value'),
+    Input(component_id='detail_pk_sel', component_property='value')
+)
+def update_pie_details(category_label, level, paper_pk):
+    if not category_label:
+        raise PreventUpdate
+    elif not level:
+        raise PreventUpdate
+    else:
+        return fu.generate_detail_piechart_or_hist(paper_pk, category_label, level, engine, dim_ent, ent_hierarchy, fig_type='pie')
+
+@app.callback(
+    Output(component_id='for_detail_hist', component_property='children'),
+    Input(component_id='hist_label_sel', component_property='value'),
+    Input(component_id='hist_level', component_property='value'),
+    Input(component_id='detail_pk_sel', component_property='value')
+)
+def update_hist_details(category_label, level, paper_pk):
+    if not category_label:
+        raise PreventUpdate
+    elif not level:
+        raise PreventUpdate
+    else:
+        return fu.generate_detail_piechart_or_hist(paper_pk, category_label, level, engine, dim_ent, ent_hierarchy, fig_type='hist')
+
 
 #CALLBACK FUNCTIONS FOR REFERENCE SEARCH TAB
 @app.callback(

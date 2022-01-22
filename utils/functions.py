@@ -243,7 +243,6 @@ def generate_bubblechart(x_value, y_value, checked_paper_pks, df_complete, dim_e
     fig=px.scatter(data_frame=df_grouped, x=x_value, y=y_value, size='counts')
     return fig
 
-
 def generate_metadata_graphs(checked_paper_pks, df_complete, engine):
     filtered_df=df_complete[df_complete.paper_pk.isin(checked_paper_pks)]
     #time histogram
@@ -306,6 +305,7 @@ def get_summary_fields(paper_key, engine, dim_ent):
         dbc.CardBody([
             html.Br(),
             html.H3(title, className='card-title'),
+            html.Br(),
             html.Div(authors_h5, className='card-subtitle'),
             html.Hr(),
             html.H4(str(year.year)),
@@ -315,10 +315,10 @@ def get_summary_fields(paper_key, engine, dim_ent):
             html.Br(),
             html.Div(children=[
                 html.P('Analyse a category with Piechart: '),
-                dbc.Select(id='bar_label_sel', options=get_label_options(dim_ent), placeholder='Select category to analyse', style={'width': '50%', 'display':'inline-block', 'padding': '5px'}),
-                dbc.Input(id='bar_level', type='number', min=0, max=8, step=1, value=2, style={'width': '20%', 'display':'inline-block', 'padding': '5px'}),
+                dbc.Select(id='pie_label_sel', options=get_label_options(dim_ent), placeholder='Select category to analyse', style={'width': '50%', 'display':'inline-block', 'padding': '5px'}),
+                dbc.Input(id='pie_level', type='number', min=0, max=8, step=1, value=2, style={'width': '20%', 'display':'inline-block', 'padding': '5px'}),
                 html.Br(),
-                html.Div(id='for_detail_bar')
+                html.Div(id='for_detail_pie')
             ],
             style={'width': '45%', 'display':'inline-block'}               
             ),
@@ -334,6 +334,31 @@ def get_summary_fields(paper_key, engine, dim_ent):
             html.Br()
         ])
     ])
+
+def load_ents_for_paper_and_label(paper_pk, entity_label, engine):
+    query="select entity_label, entity_name, entity_count, paper_pk from (select entity_pk, entity_count, paper_pk from (fact_entity_detection fed left join dim_sentence ds on fed.sentence_pk = ds.sentence_pk) as fse left join dim_paragraph dp on fse.paragraph_pk = dp.paragraph_pk) as fpa left join dim_entity de on fpa.entity_pk =de.entity_pk where paper_pk={} and entity_label='{}'".format(paper_pk, entity_label)
+    all_ents_pk_label=load_df_from_query(engine, query)
+    return all_ents_pk_label
+
+def generate_detail_piechart_or_hist(paper_pk, entity_label, level, engine, dim_ent, ent_hierarchy, fig_type):
+    all_ents=load_ents_for_paper_and_label(paper_pk, entity_label, engine)
+    if all_ents.empty:
+        return html.P('Sorry, no entities were detected for this category. Try another one!')
+    else:
+        #aggregate the entities to the desired level
+        all_ents['entity_name']=all_ents['entity_name'].apply(lambda x: drill_to_level(x, level, dim_ent, ent_hierarchy))
+        #duplicate rows by the count they have in entity_count (as piechart only takes one column as input)
+        all_ents_dup_count=pd.DataFrame(np.repeat(all_ents.values, all_ents['entity_count'].replace(0,1).tolist(), axis=0), columns=all_ents.columns)
+        if fig_type=='pie':
+            fig_pie=px.pie(all_ents_dup_count, names='entity_name')#, color_discrete_sequence=px.colors.sequential.Plasma, title='Publications per journal')
+            fig_pie.update_traces(textinfo='value')
+            return dcc.Graph(figure=fig_pie)
+        else:
+            nbins=all_ents_dup_count.entity_name.nunique()
+            fig_hist=go.Figure()
+            fig_hist.add_trace(go.Histogram(x=all_ents_dup_count.entity_name, y=all_ents_dup_count.entity_name, nbinsx=nbins))#, nbinsx=nbins, marker_color='#000099', opacity=0.75))
+            fig_hist.update_layout(bargap=0.2)
+            return dcc.Graph(figure=fig_hist)
 
 ###########################
 #REFERENCES VISUALIZATION
