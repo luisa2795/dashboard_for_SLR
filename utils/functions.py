@@ -67,6 +67,7 @@ def prep_df_for_display(engine):
     #put together the keywords to a keyword string
     pap_kw=pap_kw.groupby('paper_pk')['keyword_string'].apply(', '.join).reset_index()
     final_df=pd.merge(pap_kw, pap.drop(columns='keyword_string'), how='left', on='paper_pk').rename(columns={'keyword_string': 'keywords'}).drop_duplicates().drop(columns=['citekey', 'article_source_id', 'authorgroup_pk', 'journal_pk'])
+    final_df['year']=final_df['year'].apply(lambda y: y.year)
     return final_df
 
 def search_papers_by_title(engine, keyword, searchtitle=True, searchabstract=False, searchkeywords=False): 
@@ -75,10 +76,17 @@ def search_papers_by_title(engine, keyword, searchtitle=True, searchabstract=Fal
         result=load_df_from_query(engine,query)
     return(result)
 
-def filter_df_columns_by_keyword(df, keyword, columns_to_search):
+def filter_df_columns_by_searchterm(df, searchphrase, columns_to_search):
     matches=pd.DataFrame()
     for col in columns_to_search:
-        matches_col=df[df[col].str.contains(".*{}.*".format(keyword), case=False)]
+        if len(searchphrase.split())<2:
+            condition="df[col].str.contains('.*{}.*', regex=True, case=False)".format(searchphrase)
+        else:
+            condition=''
+            for word in searchphrase.split():
+                condition=condition + "df[col].str.contains('.*{}.*', regex=True, case=False)".format(word) +' & '
+            condition=condition.rstrip(' & ')
+        matches_col=df[eval(condition)]
         matches=pd.concat([matches, matches_col])
     return matches
 
@@ -135,39 +143,63 @@ def generate_result_table(result_df):
         id='search_result_table',
         columns=[{"name": i, "id": i, "selectable": True} for i in result_df.columns], #"deletable": True, 
         data=result_df.to_dict('records'),
-        editable=True,
+        #editable=True,
         filter_action="native",
         sort_action="native",
         sort_mode="multi",
-        column_selectable="single",
+        #column_selectable="single",
         row_selectable="multi",
-        row_deletable=True,
+        #row_deletable=True,
         selected_columns=[],
         selected_rows=[],
         page_action="native",
         page_current= 0,
         page_size= 10,
-        style_data={
-        'whiteSpace': 'normal',
-    },
+        style_table={'overflowX': 'auto'},#'height': '500px', 
+        #fixed_rows={'headers': True},
+        style_data={'whiteSpace': 'normal'},
         css=[{
         'selector': '.dash-spreadsheet td div',
-        'rule': '''
+        'rule': '''-    
             line-height: 15px;
             max-height: 30px; min-height: 30px; height: 30px;
             display: block;
             overflow-y: hidden;
         '''
-    }],
+        },
+        {
+        'selector': '.dash-table-tooltip',
+        'rule': 'background-color: grey; font-family: "Times New Roman", Times, serif; color: white; width: 1000px; max-width: 1000px'
+        }],
+        tooltip_header={i: i for i in result_df.columns},
         tooltip_data=[
         {
             column: {'value': str(value), 'type': 'markdown'}
             for column, value in row.items()
         } for row in result_df.to_dict('records')
-    ],
-    tooltip_duration=None,
-
-        style_cell={'textAlign': 'left'}))
+        ],
+        tooltip_duration=None,
+        style_cell={
+            'textAlign': 'left',
+            'overflow': 'hidden',
+            'textOverflow': 'ellipsis',
+            'font-family': 'Times New Roman, Times, serif',
+            'fontSize':11
+            },
+        style_cell_conditional=[
+            {
+                'if':{'column_id': 'no_of_pages'},
+                'textAlign': 'right'
+            },
+            {
+                'if':{'column_id': 'no_of_participants'},
+                'textAlign': 'right'
+            },
+            {
+                'if':{'column_id': 'metric_value'},
+                'textAlign': 'right'
+            }
+        ]))
 
 def get_filtered_df_from_string_of_paper_pks(selected_pks_string, df_complete):
     #transform string back to list of integer paper_pks
@@ -180,7 +212,7 @@ def get_filtered_df_from_string_of_paper_pks(selected_pks_string, df_complete):
 def get_checkboxes_from_selected_papers(selected_pks_string, df_complete):
     filtered_df=get_filtered_df_from_string_of_paper_pks(selected_pks_string, df_complete)
     options=filtered_df[['paper_pk', 'title']].apply(lambda row: {'label': str(row['paper_pk']) + ' - ' + row['title'], 'value': row['paper_pk']}, axis=1).to_list()
-    return dcc.Checklist(id='analysis_papers_checklist', options=options, value=filtered_df['paper_pk'].to_list(), labelStyle={'font-size': '11px'})
+    return dcc.Checklist(id='analysis_papers_checklist', options=options, value=filtered_df['paper_pk'].to_list(), labelStyle={'font-size': '12px'})
 
 def generate_parallel_categories_overview_graph(selected_pks_list, df_complete):
     filtered_df=df_complete[df_complete.paper_pk.isin(selected_pks_list)]
@@ -246,13 +278,14 @@ def generate_bubblechart(x_value, y_value, checked_paper_pks, df_complete, dim_e
 def generate_metadata_graphs(checked_paper_pks, df_complete, engine):
     filtered_df=df_complete[df_complete.paper_pk.isin(checked_paper_pks)]
     #time histogram
-    nbins=round(((filtered_df.year.max()-filtered_df.year.min()).days)/365.24259)
+    nbins=int(filtered_df.year.max()-filtered_df.year.min())
     fig_time=go.Figure()
     fig_time.add_trace(go.Histogram(x=filtered_df.year, y=filtered_df.title, nbinsx=nbins, marker_color='#000099', opacity=0.75))
     fig_time.update_layout(bargap=0.2, title_text='Publications over time')
     #journals pie chart
     #first, get journal information for each paper in the selection
-    jour_sql='select * from (select journal_pk, paper_pk, title as paper_title from dim_paper dp where paper_pk in {}) as pap left join dim_journal dj on pap.journal_pk = dj.journal_pk '.format(tuple(checked_paper_pks))
+    pk_tup=tuple(checked_paper_pks) if len(checked_paper_pks)>1 else ('({})'.format(checked_paper_pks[0]))
+    jour_sql='select * from (select journal_pk, paper_pk, title as paper_title from dim_paper dp where paper_pk in {}) as pap left join dim_journal dj on pap.journal_pk = dj.journal_pk '.format(pk_tup)
     journals_filtered=load_df_from_query(engine, querystring=jour_sql)
     fig_journals=px.pie(journals_filtered, names='title', color_discrete_sequence=px.colors.sequential.Plasma, title='Publications per journal')
     fig_journals.update_traces(textinfo='value')
@@ -266,9 +299,10 @@ def generate_metadata_graphs(checked_paper_pks, df_complete, engine):
     )
     #institutes pie chart
     #which authors are involved?
-    auth_sql='select * from (select * from (select authorgroup_pk, paper_pk, title as paper_title from dim_paper dp where paper_pk in {}) as pap left join bridge_paper_author bpa on pap.authorgroup_pk = bpa.authorgroup_pk) as agr left join dim_author da on agr.author_pk=da.author_pk'.format(tuple(checked_paper_pks))
+    auth_sql='select * from (select * from (select authorgroup_pk, paper_pk, title as paper_title from dim_paper dp where paper_pk in {}) as pap left join bridge_paper_author bpa on pap.authorgroup_pk = bpa.authorgroup_pk) as agr left join dim_author da on agr.author_pk=da.author_pk'.format(pk_tup)
     authors_filtered=load_df_from_query(engine, querystring=auth_sql)
-    fig_institutes=px.pie(authors_filtered, names='institution', color_discrete_sequence=px.colors.sequential.Plasma, hover_data=['country'], title='Publications per institute')
+    authors_filtered=authors_filtered[authors_filtered['institution']!='MISSING']
+    fig_institutes=px.pie(authors_filtered, names='institution', color_discrete_sequence=px.colors.sequential.Plasma, hover_data=['country'], title='Institutes of publishing authors')
     fig_institutes.update_traces(textinfo='value')
     fig_institutes.update_layout(
         legend=dict(
