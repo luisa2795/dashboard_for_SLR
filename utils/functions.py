@@ -70,11 +70,11 @@ def prep_df_for_display(engine):
     final_df['year']=final_df['year'].apply(lambda y: y.year)
     return final_df
 
-def search_papers_by_title(engine, keyword, searchtitle=True, searchabstract=False, searchkeywords=False): 
-    if searchtitle:
-        query="select * from aggregation_paper ap where title ilike '%{}%'".format(keyword)
-        result=load_df_from_query(engine,query)
-    return(result)
+# def search_papers_by_title(engine, keyword, searchtitle=True, searchabstract=False, searchkeywords=False): 
+#     if searchtitle:
+#         query="select * from aggregation_paper ap where title ilike '%{}%'".format(keyword)
+#         result=load_df_from_query(engine,query)
+#     return(result)
 
 def filter_df_columns_by_searchterm(df, searchphrase, columns_to_search):
     matches=pd.DataFrame()
@@ -332,15 +332,15 @@ def get_summary_fields(paper_key, engine, dim_ent):
     authors_df=load_df_from_query(engine, author_query)
     authors_df.sort_values(by=['author_position'], inplace=True)
     authors_df.drop(columns='author_position', inplace=True)
-    authors_h5=[]
+    authors_h6=[]
     for author in [', '.join(a) for a in [[s for s in sl if s != 'MISSING'] for sl in authors_df.values.tolist()]]:
-        authors_h5.append(html.H5(author))
+        authors_h6.append(html.H6(author))
     return dbc.Card([
         dbc.CardBody([
             html.Br(),
             html.H3(title, className='card-title'),
             html.Br(),
-            html.Div(authors_h5, className='card-subtitle'),
+            html.Div(authors_h6, className='card-subtitle'),
             html.Hr(),
             html.H4(str(year.year)),
             html.P(abstract),
@@ -396,7 +396,7 @@ def load_ents_for_paper_and_label(paper_pk, entity_label, engine):
 def generate_detail_piechart_or_hist(paper_pk, entity_label, level, engine, dim_ent, ent_hierarchy, fig_type):
     all_ents=load_ents_for_paper_and_label(paper_pk, entity_label, engine)
     if all_ents.empty:
-        return html.P('Sorry, no entities were detected for this category. Try another one!')
+        return html.P('Sorry, no entities were detected for {}. Try another category!'.format(entity_label), style={'color': '#e74c3c'})
     else:
         #aggregate the entities to the desired level
         all_ents['entity_name']=all_ents['entity_name'].apply(lambda x: drill_to_level(x, level, dim_ent, ent_hierarchy))
@@ -412,71 +412,3 @@ def generate_detail_piechart_or_hist(paper_pk, entity_label, level, engine, dim_
             fig_hist.add_trace(go.Histogram(x=all_ents_dup_count.entity_name, y=all_ents_dup_count.entity_name, nbinsx=nbins))#, nbinsx=nbins, marker_color='#000099', opacity=0.75))
             fig_hist.update_layout(bargap=0.2)
             return dcc.Graph(figure=fig_hist)
-
-###########################
-#REFERENCES VISUALIZATION
-###########################
-
-def get_barchart_of_most_relevant_citations(entity_list, engine, n_ref=15):
-    #ref_topic_sql='select count(*), paper_pk, title, year, citekey from dim_paper dp where paper_pk in (select paper_pk from bridge_sentence_citation bsc where citationgroup_pk in (select citationgroup_pk from dim_sentence where sentence_pk in (select sentence_pk from fact_entity_detection fed where entity_pk in (select entity_pk from dim_entity where entity_name in {})))) group by dp.paper_pk order by count(*) desc'
-    para_sql='select count(*), paper_pk, title, year, citekey from dim_paper dp where paper_pk in (select paper_pk from bridge_sentence_citation bsc where citationgroup_pk in (select citationgroup_pk from dim_sentence where paragraph_pk in (select paragraph_pk from dim_sentence ds where sentence_pk in (select sentence_pk from fact_entity_detection fed where entity_pk in (select entity_pk from dim_entity where entity_name in {}))))) group by dp.paper_pk order by count(*) desc'
-    if len(entity_list)==1:
-        df_ref=load_df_from_query(engine, para_sql.format("('" + entity_list[0] + "')"))
-    else:
-        df_ref=load_df_from_query(engine, para_sql.format(tuple(entity_list)))
-    #drop missing titles
-    df_ref=df_ref[~(df_ref['title']=='MISSING')]
-    #aggregate the same titles by their sum of count
-    for_bar=df_ref.groupby(by='title')['count'].agg('sum').reset_index()
-    #get the n_ref most popular titles
-    for_bar=for_bar.sort_values(by='count', ascending=True, ignore_index=True)[-n_ref:]
-    fig_bar=px.bar(
-        for_bar, x='count', y='title', 
-        color_discrete_sequence=px.colors.sequential.Plasma, 
-        text='title',
-        labels={'title': 'reference title', 'count': 'times referenced for selected entities'}) #, height=600
-    fig_bar.update_yaxes(showticklabels=False)
-    fig_bar.update_traces(textfont_size=10, textposition='inside')
-    return fig_bar
-
-def non_missing_longest(ser):
-    ser=ser[~ser.str.contains('MISSING')]
-    if ser.size!=0:
-        return max(ser, key=len)
-    else:
-        return 'MISSING'
-
-def get_barchart_of_most_influential_authors(entity_list, engine, n_ref=15):
-    auth_sql='''
-    select *, count(*) from dim_author da where author_pk in (
-    select author_pk from bridge_paper_author bpa where authorgroup_pk in (
-    select authorgroup_pk from dim_paper where paper_pk in (
-    select paper_pk from bridge_sentence_citation bsc where citationgroup_pk in (
-    select citationgroup_pk from dim_sentence where paragraph_pk in (
-    select paragraph_pk from dim_sentence ds where sentence_pk in (
-    select sentence_pk from fact_entity_detection fed where entity_pk in (
-    select entity_pk from dim_entity where entity_name in {})))))))
-    group by da.author_pk 
-    order by count(*) desc'''
-    if len(entity_list)==1:
-        df_aut=load_df_from_query(engine, auth_sql.format("('" + entity_list[0] + "')"))
-    else:
-        df_aut=load_df_from_query(engine, auth_sql.format(tuple(entity_list)))
-    aut_gr=df_aut.groupby(['surname']).agg({
-        'firstname': non_missing_longest,
-        'middlename': non_missing_longest,
-        'email': non_missing_longest,
-        'department': non_missing_longest,
-        'institution': non_missing_longest,
-        'country': non_missing_longest,
-        'count': 'sum'
-    }).reset_index()
-    aut_gr=aut_gr.sort_values(by='count', ascending=True, ignore_index=True)[-15:]
-    aut_fig=px.bar(
-        aut_gr, x='count', y='surname', 
-        color_discrete_sequence=px.colors.sequential.Plasma, 
-        #text='firstname', 
-        hover_data=['surname', 'firstname', 'middlename', 'email', 'department', 'institution', 'country']
-        )
-    aut_fig.update_traces(textangle=0)
-    return aut_fig
