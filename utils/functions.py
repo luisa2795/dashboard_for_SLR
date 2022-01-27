@@ -349,8 +349,18 @@ def get_summary_fields(paper_key, engine, dim_ent):
             html.Br(),
             html.Div(children=[
                 html.P('Analyse a category with Piechart: '),
-                dbc.Select(id='pie_label_sel', options=get_label_options(dim_ent), placeholder='Select category to analyse', style={'width': '50%', 'display':'inline-block', 'padding': '5px'}),
-                dbc.Input(id='pie_level', type='number', min=0, max=8, step=1, value=2, style={'width': '20%', 'display':'inline-block', 'padding': '5px'}),
+                html.Div([
+                    dbc.Select(id='pie_label_sel', options=get_label_options(dim_ent), placeholder='Select category to analyse'),
+                    dbc.FormText('category to analyse')
+                ],
+                style={'width': '50%', 'display':'inline-block', 'padding': '5px'}
+                ),
+                html.Div([
+                    dbc.Input(id='pie_level', type='number', min=0, max=8, step=1, value=2, style={'width': '80%'}),
+                    dbc.FormText('drill down / roll up')
+                ],
+                style={'width': '30%', 'display':'inline-block', 'padding': '5px'}
+                ),
                 html.Br(),
                 html.Div(id='for_detail_pie')
             ],
@@ -358,8 +368,17 @@ def get_summary_fields(paper_key, engine, dim_ent):
             ),
             html.Div(children=[
                 html.P('Analyse a category with Histogram: '),
-                dbc.Select(id='hist_label_sel', options=get_label_options(dim_ent), placeholder='Select category to analyse', style={'width': '50%', 'display':'inline-block', 'padding': '5px'}),
-                dbc.Input(id='hist_level', type='number', min=0, max=8, step=1, value=2, style={'width': '20%', 'display':'inline-block', 'padding': '5px'}),
+                html.Div([
+                    dbc.Select(id='hist_label_sel', options=get_label_options(dim_ent), placeholder='Select category to analyse'),
+                    dbc.FormText('category to analyse')
+                ],
+                style={'width': '50%', 'display':'inline-block', 'padding': '5px'}),
+                html.Div([
+                    dbc.Input(id='hist_level', type='number', min=0, max=8, step=1, value=2, style={'width': '80%'}),
+                    dbc.FormText('drill down / roll up')
+                ],
+                style={'width': '30%', 'display':'inline-block', 'padding': '5px'}
+                ),
                 html.Br(),
                 html.Div(id='for_detail_hist')
             ],

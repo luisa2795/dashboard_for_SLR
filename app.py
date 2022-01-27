@@ -37,7 +37,85 @@ tab_info_content=dbc.Card(
                 The tab **Reference search** is designed to help you for example with your theoretical concepts / methodology chapter. Which paper and which authors have been quoted often
                 for your concept of interest? '''
             ),
-            dbc.Button('Learn more')
+            dbc.Button('Learn more', id='collapse_project_info', n_clicks=0),
+            html.Br(),
+            dbc.Collapse(
+                id='project_info',
+                is_open=False,
+                children=[
+                    html.Div(children=[
+                        html.Div([
+                            html.Div([
+                                dbc.Button('Corpus', color='success', id='corpus_btn', n_clicks=0, style={'width': '100%'}),
+                                dbc.Collapse(
+                                    id='corpus_info',
+                                    children=['The included papers are taken from the top eight journals in the domain of information systems and were published between 1989 and September 2021.'],
+                                    is_open=False
+                                )
+                            ],
+                            style={'padding': '10px', 'display': 'inline-block', 'width': '50%', 'vertical-align': 'top'}),
+                            html.Div([
+                                dbc.Button('Knowledge extraction', color='success', id='know_btn', n_clicks=0, style={'width': '100%'}),
+                                dbc.Collapse(
+                                    id='ke_info',
+                                    children=[
+                                        dcc.Markdown(
+                                            '''Prior project work developed CauseMiner2, an analysis pipeline to transform the paper PDFs to XML and embed citations. 
+                                            With an IS Research Ontology and a custom sentence tagging module, entities (= structured domain knowledge) can be recognized 
+                                            in the preprocessed corpus. The analysed papers with recognized entities for each sentence were stored in CSV files of 
+                                            different aggregation level.'''
+                                        )
+                                    ],
+                                    is_open=False
+                                )
+                            ],
+                            style={'padding': '10px', 'display': 'inline-block', 'width': '50%', 'vertical-align': 'top'}),
+                        ]),
+                        html.Div([
+                            html.Div([
+                                dbc.Button('Data warehouse', color='success', id='dwh_btn', n_clicks=0, style={'width': '100%'}),
+                                dbc.Collapse(
+                                    id='dwh_info',
+                                    children=[
+                                        dcc.Markdown(
+                                            '''The CSV files have been transformed and loaded into a Data Warehouse with a snowflake schema around the fact of an entity 
+                                            detection. The schema was designed to answer typical questions that have to be answered during a literature review. It shall 
+                                            provide the option to quickly grasp the current body of knowledge around a topic of interest and be able to compare publications 
+                                            around this topic. At the same time it shall provide enough details to drill down to the detailed content of one paper, in order 
+                                            to provide explainability for the user.'''
+                                        )
+                                    ],
+                                    is_open=False
+                                )
+                            ],
+                            style={'padding': '10px', 'display': 'inline-block', 'width': '50%', 'vertical-align': 'top'}),
+                            html.Div([
+                                dbc.Button('This dashboard', color='success', id='dashb_btn', n_clicks=0, style={'width': '100%'}),
+                                dbc.Collapse(
+                                    id='da_info',
+                                    children=[
+                                        dcc.Markdown(
+                                            '''This dashboard was designed to help users interact with the data warehouse easily. It provides abstractions of probable 
+                                            SQL statements that users would want to execute on the DWH in a literature review situation. 
+                                            Results are displayed in visually appealing manner.'''
+                                        ) 
+                                    ],
+                                    is_open=False
+                                )
+                            ],
+                            style={'padding': '10px', 'display': 'inline-block', 'width': '50%', 'vertical-align': 'top'}),
+                        ]),
+                        html.Br(),
+                        html.Div([html.Img(src=app.get_asset_url('architecture.png'))],style={'width':'80%', 'margin': 'auto'}),
+                        html.Br(),
+                        dcc.Markdown(
+                            '''_For feedback on this tool or if you would need to extract different data from the DWH, 
+                            please contact s_waack20@stud.hwr-berlin.de_''')
+                
+                    ],
+                    style={'padding': '10px', 'width': '80%', 'margin': 'auto'})
+                ]
+            )
         ]
     )
 )
@@ -99,7 +177,7 @@ tab_paper_analysis=dbc.Card(
                         dbc.Button(id='submit_entity_search', n_clicks=0, children='Submit Entity Search')
                         ], 
                         style={'width': '60%', 'float': 'right', 'display': 'inline-block', 'padding': '10px'}
-                        ), 
+                        )
                 ]),   
                     html.Br(),
                     dcc.Markdown(id='searched_term'),
@@ -176,6 +254,57 @@ app.layout=dbc.Container(
     fluid=True
        
 )
+#CALLBACK FUNCTIONS FOR INFO TAB
+@app.callback(
+    Output(component_id='project_info', component_property='is_open'), 
+    [Input(component_id='collapse_project_info', component_property='n_clicks')],
+    [State(component_id='project_info', component_property='is_open')]
+)
+def toggle_project_info(open_click, is_open):
+    if open_click:
+        return not is_open
+    return is_open
+
+@app.callback(
+    Output(component_id='corpus_info', component_property='is_open'),
+    [Input(component_id='corpus_btn', component_property='n_clicks')],
+    [State(component_id='corpus_info', component_property='is_open')]
+)
+def toggle_corpus_info(open_click, is_open):
+    if open_click:
+        return not is_open
+    return is_open
+
+@app.callback(
+    Output(component_id='ke_info', component_property='is_open'),
+    [Input(component_id='know_btn', component_property='n_clicks')],
+    [State(component_id='ke_info', component_property='is_open')]
+)
+def toggle_knowledge_extraction_info(open_click, is_open):
+    if open_click:
+        return not is_open
+    return is_open
+
+@app.callback(
+    Output(component_id='dwh_info', component_property='is_open'),
+    [Input(component_id='dwh_btn', component_property='n_clicks')],
+    [State(component_id='dwh_info', component_property='is_open')]
+)
+def toggle_dwh_info(open_click, is_open):
+    if open_click:
+        return not is_open
+    return is_open
+
+@app.callback(
+    Output(component_id='da_info', component_property='is_open'),
+    [Input(component_id='dashb_btn', component_property='n_clicks')],
+    [State(component_id='da_info', component_property='is_open')]
+)
+def toggle_dashboard_info(open_click, is_open):
+    if open_click:
+        return not is_open
+    return is_open
+
 #CALLBACK FUNCTIONS FOR PUBLICATION ANALYSIS TAB
 @app.callback(
     [
@@ -281,17 +410,6 @@ def update_selected_titles(previously_selected_papers, derived_virtual_data, der
         return return_keys
     else:
        raise PreventUpdate
-
-# @app.callback(
-#     Output(component_id='manual_selected_papers', component_property='children'),
-#     Input(component_id='reset_selection_btn', component_property='n_clicks')
-# )
-
-# def reset_selection(reset_btn_clicks):
-#     if reset_btn_clicks==0:
-#         raise PreventUpdate
-#     else:
-#         return ''
 
 
 @app.callback(
