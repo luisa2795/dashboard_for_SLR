@@ -1,5 +1,5 @@
-#DB credentials
-utils/db_credentials.py
+#credentials
+utils/credentials.py
 #testing notebook
 *.ipynb
 

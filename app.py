@@ -125,6 +125,7 @@ tab_paper_analysis=dbc.Card(
             html.Div(id='search papers', children=[
                 html.H2('Understand the current body of knowledge for your topic'),
                 dcc.Markdown('_Either search a phrase to find papers containing the terms of your interest **OR** directly search a paper by an entity._'),
+                dcc.Markdown('_This is a prototype so the different search functionalities do not yet work in parallel._'),
                 html.Hr(),
                 html.Div(children=[
                     html.Div([
@@ -437,7 +438,7 @@ def show_accordion(analysis_clicks, selected_papers_string):
                                 [
                                     
                                     html.P('Select y-axis and drill down or roll up the selected category. Highest aggregation: 0'),
-                                    dbc.Select(id='y_axis', placeholder='Select x-axis category', options=fu.get_label_options(dim_ent), style={'width': '20%', 'display':'inline-block', 'padding': '5px'}),
+                                    dbc.Select(id='y_axis', placeholder='Select y-axis category', options=fu.get_label_options(dim_ent), style={'width': '20%', 'display':'inline-block', 'padding': '5px'}),
                                     dbc.Input(id='y_level', type='number', min=0, max=8, step=1, value=1, style={'width': '10%', 'display':'inline-block', 'padding': '5px'}),
                                 ],
                                 style={'padding': '10px'}
