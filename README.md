@@ -20,7 +20,7 @@ Dashboard to search, filter and analyse scientific literature in a semi-automate
    pip install -r requirements.txt
    ```
    Check if all packages have been installed completely with ```pip freeze```. There is an odd issue that sometimes, the package psycopg2 does not get installed from the requirements. If this is the case run ```pip install psycopg2-binary```.
-3. Run the _app.py_ file. The dashboard will be available at http://127.0.0.1:8050/. You can open it by accessing this address in your browser (Chrome works best).
+3. Run the _app.py_ file. The dashboard will be available at http://127.0.0.1:8090/. You can open it by accessing this address in your browser (Chrome works best).
 
 ## Where is the data:
 The data used in this dashboard comes from a data warehouse of scientific literature. For more information on this, please check out https://github.com/luisa2795/datawarehouse_for_SLR.git. The data warehouse is located in a local PostgreSQL database on _zeno_, provided for this thesis.
