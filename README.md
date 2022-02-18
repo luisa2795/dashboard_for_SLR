@@ -2,7 +2,7 @@
 Dashboard to search, filter and analyse scientific literature in a semi-automated way
 
 ## How to run:
-1. First of all, ssh to zeno and clone the repository here. (We are using a database which does not expose a web-socket to the internet, therefore the code has to be executed on the same machine as the DB..)
+1. Clone the repository to your local machine. Make sure that this machine is connected to the HWR PN, as it must be able to communicate with the Database, which is running on the university server _zeno_.
 2. Place a file called _credentials.py_ in the _utils_ subfolder. It should contain the variable DB_CONNECTION_PARAMS to successfully connect to the database of the underlying Data Warehouse.
    ```
    DB_CONNECTION_PARAMS = {
@@ -23,7 +23,7 @@ Dashboard to search, filter and analyse scientific literature in a semi-automate
 3. Run the _app.py_ file. The dashboard will be available at http://127.0.0.1:8050/. You can open it by accessing this address in your browser (Chrome works best).
 
 ## Where is the data:
-The data used in this dashboard comes from a data warehouse of scientific literature. For more information on this, please check out https://github.com/luisa2795/datawarehouse_for_SLR.git. The data warehouse is located in a local PostgreSQL database on zeno, provided for this thesis.
+The data used in this dashboard comes from a data warehouse of scientific literature. For more information on this, please check out https://github.com/luisa2795/datawarehouse_for_SLR.git. The data warehouse is located in a local PostgreSQL database on _zeno_, provided for this thesis.
 
 ## How does the logic work:
 - The dashboard layout is defined in the _app.py_ file. After package and stylesheet import, the DB engine is initialized and all required data (some modified paper table, entities and the entity hierarchy) is loaded from the DB into dataframes. These global dataframes are not altered during a session.

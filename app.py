@@ -603,4 +603,4 @@ def update_hist_details(category_label, level, paper_pk):
 
 
 if __name__ == '__main__':
-    app.run_server() #debug=True #host="0.0.0.0", port="8050"
+    app.run_server(port=8090) #debug=True #host="0.0.0.0", port="8050"
