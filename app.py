@@ -3,11 +3,12 @@ from dash import dcc, html, dash_table
 from dash.dependencies import Input, Output, State
 import pandas as pd
 import utils.functions as fu
-from utils.credentials import DB_CONNECTION_PARAMS, VALID_USERNAME_PASSWORD_PAIRS
+from utils.credentials import DB_CONNECTION_PARAMS #, VALID_USERNAME_PASSWORD_PAIRS
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
-import dash_auth
+#import dash_auth
 
+#use external Bootswatch theme
 external_stylesheets = [dbc.themes.FLATLY ]
 
 engine=fu.initialize_engine(DB_CONNECTION_PARAMS)
@@ -18,10 +19,10 @@ df_k=fu.prep_df_for_display(engine)
 
 
 app=dash.Dash(__name__ , external_stylesheets=external_stylesheets, suppress_callback_exceptions=True) 
-auth = dash_auth.BasicAuth(
-    app,
-    VALID_USERNAME_PASSWORD_PAIRS
-)
+# auth = dash_auth.BasicAuth(
+#     app,
+#     VALID_USERNAME_PASSWORD_PAIRS
+# )
 
 tab_info_content=dbc.Card(
     dbc.CardBody(
@@ -602,4 +603,4 @@ def update_hist_details(category_label, level, paper_pk):
 
 
 if __name__ == '__main__':
-    app.run_server(host="0.0.0.0", port="8050") #debug=True
+    app.run_server() #debug=True #host="0.0.0.0", port="8050"

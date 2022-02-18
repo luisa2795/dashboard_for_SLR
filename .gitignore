@@ -2,6 +2,7 @@
 utils/credentials.py
 #testing notebook
 *.ipynb
+dashvenv*/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

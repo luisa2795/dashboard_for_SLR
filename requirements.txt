@@ -1,5 +1,5 @@
-dash
-sqlalchemy
-pandas
-dash_daq
-dash-bootstrap-components
+dash==2.1.0
+dash-bootstrap-components==1.0.3
+pandas==1.4.1
+psycopg2-binary==2.9.2
+SQLAlchemy==1.4.31
