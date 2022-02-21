@@ -1,5 +1,5 @@
 # dashboard_for_SLR
-Dashboard to search, filter and analyse scientific literature in a semi-automated way
+Dashboard to search, filter and analyse scientific literature in a semi-automated way.
 
 ## How to run:
 1. Clone the repository to your local machine. Make sure that this machine is connected to the HWR PN, as it must be able to communicate with the Database, which is running on the university server _zeno_.
@@ -13,14 +13,14 @@ Dashboard to search, filter and analyse scientific literature in a semi-automate
     'database': '<your_db_name>'
    }
    ``` 
-2. Install the packages defined in _requirements.txt_ in a fresh Python 3.9 environment. 
+3. Install the packages defined in _requirements.txt_ in a fresh Python 3.9 environment. 
    ```
    python3.9 -m venv dashvenv
    source dashvenv/bin/activate
    pip install -r requirements.txt
    ```
-   Check if all packages have been installed completely with ```pip freeze```. There is an odd issue that sometimes, the package psycopg2 does not get installed from the requirements. If this is the case run ```pip install psycopg2-binary```.
-3. Run the _app.py_ file. The dashboard will be available at http://127.0.0.1:8090/. You can open it by accessing this address in your browser (Chrome works best).
+   (Please check if all packages have been installed completely with ```pip freeze```. There is an odd issue that sometimes, the package psycopg2 does not get installed from the requirements. If this is the case run ```pip install psycopg2-binary```.)
+4. Run the _app.py_ file. The dashboard will be available at http://127.0.0.1:8090/. You can open it by accessing this address in your browser (Chrome works best).
 
 ## Where is the data:
 The data used in this dashboard comes from a data warehouse of scientific literature. For more information on this, please check out https://github.com/luisa2795/datawarehouse_for_SLR.git. The data warehouse is located in a local PostgreSQL database on _zeno_, provided for this thesis.
